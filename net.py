@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import random
 import heapq
+import matplotlib.animation as animation
 
 p_i = 0.5  # probability of infection at contact
 t_i = 2  # incubation time
@@ -30,6 +31,10 @@ class Net(object):
         self.event_list = []
         heapq.heapify(self.event_list)
 
+        self.net_states = [] # this is a list of nets at equidistant time steps
+        # i use this for the animation
+        self.pos = nx.spring_layout(self.graph, seed=seed)
+
 
         for id in range(n):
             # at first all are susceptible
@@ -37,7 +42,7 @@ class Net(object):
             # print(net.edges)
             self.graph.nodes[id]['state'] = 0
 
-
+        self.draw()
     # events:
 
     def infection(self, time, id):
@@ -130,18 +135,24 @@ class Net(object):
         event = (0, INFECTION, 0) # ind. #0 is infected at t = 0
         heapq.heappush(self.event_list, event)
 
-        intervals = 2 # days for each animation frame
-
+        intervals = 1 # days for each animation frame
         counter = 0
+
+
+
         while self.event_list:
             event = heapq.heappop(self.event_list)
             self.do_event(event)
 
             current_t = event[0]
             if current_t >= counter * intervals:
-                # frame
+                # ims.append(self.draw())
+                import copy
+
+                self.net_states.append((self.graph.copy(), self.colormap.copy()))
                 counter += 1
-            
+        print('abc')
+        pass
 
 
 
@@ -172,19 +183,52 @@ class Net(object):
             raise Exception('This event type has not been implemented')
 
     def draw(self):
-        pos = nx.spring_layout(self.graph, seed=100)
+        pos = self.pos
         # i deliberately leave the seed fixed, maybe I want same positions for networks of equal size
         nx.draw(self.graph, node_color = self.colormap, pos = pos)
+
         plt.show()
 
     def update_state(self, id, state):
         self.graph.nodes[id]['state'] = state
 
+    def last_sim_animated(self):
+        assert self.net_states, "You need to run the simulation first!"
 
-# REMINDER:
+
+        fig = plt.figure()
+        pos = self.pos
+        def animate(idx):
+            net_state = self.net_states[idx]
+
+            graph = net_state[0]
+            colormap = net_state[1]
+            # fig.clf()
+
+            nx.draw(graph, node_color = colormap, pos = pos)
+
+
+        anim = animation.FuncAnimation(fig, animate, frames=len(self.net_states), interval=1000, blit=False)
+
+        anim.save('test.mp4')
+        print('saved animation.')
+
+    # def animate(self,idx):
+    #     if idx == 3:
+    #         plt.scatter([1,2,3,4],[1,10,4,7])
+    #         return
+    #     pos = nx.spring_layout(self.graph, seed=100)
+    #     nx.draw(self.net_states[idx], node_color = self.colormap, pos = pos)
+    # def animate(self,i):
+    #     colors = ['r', 'b', 'g', 'y', 'w', 'm']
+    #     nx.draw_circular(self.graph, node_color=[random.choice(colors) for j in range(3)])
+
+    # REMINDER:
 # heapq uses lists as binary trees! So to go through it descendingly means the sequence
 # 2k+2, 2k+1, 2(k-1)+2, ..., 1, 0 (i think)
 # this is important for the canceling edge!
+
+
 
 
 # from https://stackoverflow.com/questions/10162679/python-delete-element-from-heap
@@ -198,10 +242,13 @@ def heap_delete(h:list, i):
 
 
 if __name__ == '__main__':
-    net = Net(3,0.1,123)
+    net = Net(20,0.15,123456)
     # net.draw()
 
     net.sim()
 
+
+
+    net.last_sim_animated()
 
 
