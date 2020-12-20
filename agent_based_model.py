@@ -52,21 +52,11 @@ state_graph = np.zeros((n, time),dtype=int) # list of states of each individual 
 state_graph[0:init_infected,0] = 2
 
 
-env = sp.Environment()
 
-# net = nx.gnp_random_graph(n, p, seed = 12345)
-# for id in range(n):
-#     # at first all are susceptible
-#     # print(net.nodes)
-#     # print(net.edges)
-#     net.nodes[id]['obj'] = Person(env, id=id, state=0)
-# net.nodes[1]['obj'].infection(1)
-
-net = Net(env, n, p)
+net = Net(n, p)
 
 
-env.run(until=1000)
-net.draw()
+net.sim()
 
 # test = Person(env, id = 10, state = 1)
 # test.infection(1)
