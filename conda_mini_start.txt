@@ -1,0 +1,3 @@
+install miniconda, then:
+
+conda install numpy matplotlib networkx

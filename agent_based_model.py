@@ -7,10 +7,14 @@
     # 2 infectious
     # 3 recovered
 
-# let's start with simple time steps and agents (might move on to events?)
+# events are actually easier? hard to make agents time things right otherwise (recovery time etc)
 
 import numpy as np
 import networkx as nx
+import simpy as sp
+import matplotlib.pyplot as plt
+from person import Person
+from net import Net
 
 
 # parameters: number of people, initial nr of infected, random network parameters (p or M for generating network structure)
@@ -26,4 +30,55 @@ import networkx as nx
     # print picture at each time step (animation)
     # visualize each of the 4 states with different colour
     # can the network dynamics change? If so, how?
+
+n = 20
+p = 0.05 # probability of friendship between each individual
+init_infected = 1
+time = 30 # in days
+
+incubation_time = 2
+recovery_time = 14
+risk = 0.1 # probability of infection per day for two friends
+
+
+# init
+state_graph = np.zeros((n, time),dtype=int) # list of states of each individual for each day
+# encode as:
+    # 0:susceptible
+    # 1:exposed
+    # 2:infected
+    # 3:recovered
+
+state_graph[0:init_infected,0] = 2
+
+
+env = sp.Environment()
+
+# net = nx.gnp_random_graph(n, p, seed = 12345)
+# for id in range(n):
+#     # at first all are susceptible
+#     # print(net.nodes)
+#     # print(net.edges)
+#     net.nodes[id]['obj'] = Person(env, id=id, state=0)
+# net.nodes[1]['obj'].infection(1)
+
+net = Net(env, n, p)
+
+
+env.run(until=1000)
+net.draw()
+
+# test = Person(env, id = 10, state = 1)
+# test.infection(1)
+# print(test)
+
+
+
+
+# nx.draw(net)
+# # plt.show()
+
+
+
+
 
