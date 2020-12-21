@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import random
 import heapq
 import matplotlib.animation as animation
+import time
 
 p_i = 0.5  # probability of infection at contact
 t_i = 2  # incubation time
@@ -42,21 +43,21 @@ class Net(object):
             # print(net.edges)
             self.graph.nodes[id]['state'] = 0
 
-        self.draw()
+        # self.draw()
     # events:
 
     def infection(self, time, id):
 
         self.update_state(id,1) # exposed now
         self.colormap[id] = 'yellow'
-        print('Person #{} has been exposed at time {}'.format(id, time))
+        # print('Person #{} has been exposed at time {}'.format(id, time))
 
 
         # schedule infectious event
         heapq.heappush(self.event_list, (time + t_i, INFECTIOUS, id))
 
     def infectious(self, time, id):
-        print('Person #{} started being infectious at time {}'.format(id, time))
+        # print('Person #{} started being infectious at time {}'.format(id, time))
         self.update_state(id,2)
         self.colormap[id] = 'red'
 
@@ -74,7 +75,7 @@ class Net(object):
 
         if self.graph.nodes[contacted_friend]['state'] == 0:
 
-            print('#' + str(id) + ' has had contact with #{}.'.format(contacted_friend))
+            # print('#' + str(id) + ' has had contact with #{}.'.format(contacted_friend))
             u = random.uniform(0,1)
 
             if u < p_i:
@@ -122,9 +123,9 @@ class Net(object):
 
         self.update_state(id,3) # individuum is saved as recovered
         self.colormap[id] = 'grey'
-        print(str(id)+' has recovered.')
+        # print(str(id)+' has recovered.')
 
-        print('Contact process stopped due to recovery.')
+        # print('Contact process stopped due to recovery.')
 
 
 
@@ -135,7 +136,7 @@ class Net(object):
         event = (0, INFECTION, 0) # ind. #0 is infected at t = 0
         heapq.heappush(self.event_list, event)
 
-        intervals = 1 # days for each animation frame
+        intervals = 20 # days for each animation frame
         counter = 0
 
 
@@ -151,13 +152,11 @@ class Net(object):
 
                 self.net_states.append((self.graph.copy(), self.colormap.copy()))
                 counter += 1
-        print('abc')
-        pass
 
 
 
 
-        print('simulation complete.')
+        print('Simulation complete.')
 
     def do_event(self, event):
         time = event[0]
@@ -192,12 +191,14 @@ class Net(object):
     def update_state(self, id, state):
         self.graph.nodes[id]['state'] = state
 
-    def last_sim_animated(self):
+    def animate_last_sim(self):
         assert self.net_states, "You need to run the simulation first!"
 
 
         fig = plt.figure()
         pos = self.pos
+
+        # function that draws a single frame from a saved state
         def animate(idx):
             net_state = self.net_states[idx]
 
@@ -242,13 +243,21 @@ def heap_delete(h:list, i):
 
 
 if __name__ == '__main__':
-    net = Net(20,0.15,123456)
+    net = Net(1000,0.15,123456)
     # net.draw()
 
+
+
+    start = time.time()
     net.sim()
+    end = time.time()
 
+    print('Simulation time: {}s'.format(end-start))
 
+    start = time.time()
+    net.animate_last_sim()
+    end = time.time()
 
-    net.last_sim_animated()
+    print('Animation time: {}s'.format(end-start))
 
 

@@ -13,7 +13,6 @@ import numpy as np
 import networkx as nx
 import simpy as sp
 import matplotlib.pyplot as plt
-from person import Person
 from net import Net
 
 
@@ -58,17 +57,4 @@ net = Net(n, p)
 
 net.sim()
 
-# test = Person(env, id = 10, state = 1)
-# test.infection(1)
-# print(test)
-
-
-
-
-# nx.draw(net)
-# # plt.show()
-
-
-
-
-
+net.animate_last_sim()
