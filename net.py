@@ -13,6 +13,7 @@ p_i = 0.5  # probability of infection at contact
 t_i = 2  # incubation time
 t_r = 14  # recovery time
 t_c = 1  # rate of contacts
+max_time = 200
 
 INFECTION = 0
 INFECTIOUS = 1
@@ -24,9 +25,15 @@ class Net(object):
 
     def __init__(self, n, p, seed = 12345):
 
+        print("Initializing network...")
+        start = time.time()
+
         self.n = n
-        self.graph = nx.gnp_random_graph(n, p, seed = seed)
+        # self.graph = nx.gnp_random_graph(n, p, seed = seed)
+        self.graph = nx.fast_gnp_random_graph(n, p, seed = seed)
+
         self.colormap = ['green' for i in range(n)]
+
         random.seed(seed)
 
         self.event_list = []
@@ -42,6 +49,10 @@ class Net(object):
             # print(net.nodes)
             # print(net.edges)
             self.graph.nodes[id]['state'] = 0
+
+        end = time.time()
+
+        print("Network initialized. Time elapsed: {}s.".format(end-start))
 
         # self.draw()
     # events:
@@ -68,7 +79,10 @@ class Net(object):
     def contact(self, time, id):
 
         friends = list(self.graph.neighbors(id))
-        contacted_friend = random.choice(friends)
+        if friends:
+            contacted_friend = random.choice(friends)
+        else:
+            return
 
         # if self.graph.nodes[id]['state'] == 3:
         #     yield
@@ -102,22 +116,26 @@ class Net(object):
     def recover(self, time, id):
 
         # cancel related contact event
-        if self.graph.nodes[id]['latest_contact']:
-            copy = self.event_list.copy()
+        try:
+            if self.graph.nodes[id]['latest_contact']:
+                copy = self.event_list.copy()
 
-            # TODO this could be faster, i can use heap structure to stop earlier right?
-            fitting_events = []
-            for i, event in enumerate(copy):
-                if event[0] == 2 and event[2] == id:
-                    fitting_events.append((event[0], i))
-                    # with time and index i have all information needed to cancel
-                    # NEXT scheduled event with this id and type
-            cancel_prioritized = sorted(fitting_events, key= lambda x: x[0]) # sort for time
-            try:
-                i = cancel_prioritized[0][1] # gets index of original heap
-                heap_delete(self.event_list, i)
-            except IndexError: # no scheduled event that fits
-                pass
+                # TODO this could be faster, i can use heap structure to stop earlier right?
+                fitting_events = []
+                for i, event in enumerate(copy):
+                    if event[0] == 2 and event[2] == id:
+                        fitting_events.append((event[0], i))
+                        # with time and index i have all information needed to cancel
+                        # NEXT scheduled event with this id and type
+                cancel_prioritized = sorted(fitting_events, key= lambda x: x[0]) # sort for time
+                try:
+                    i = cancel_prioritized[0][1] # gets index of original heap
+                    heap_delete(self.event_list, i)
+                except IndexError: # no scheduled event that fits
+                    pass
+        except:
+            pass
+
 
 
 
@@ -133,30 +151,46 @@ class Net(object):
 
     def sim(self, animation = True):
         # call first infection event
+
+        start = time.time()
+
+        print('Simulation started.')
+
+
         event = (0, INFECTION, 0) # ind. #0 is infected at t = 0
         heapq.heappush(self.event_list, event)
 
-        intervals = 20 # days for each animation frame
+        intervals = 2 # days for each animation frame
         counter = 0
 
 
 
         while self.event_list:
+
             event = heapq.heappop(self.event_list)
+
+            if event[0] > max_time:
+                break
+
             self.do_event(event)
 
             current_t = event[0]
             if current_t >= counter * intervals:
                 # ims.append(self.draw())
-                import copy
 
-                self.net_states.append((self.graph.copy(), self.colormap.copy()))
+                # self.net_states.append((self.graph.copy(), self.colormap.copy()))
+                # self.net_states.append((0, color_to_int(self.colormap)))
+                self.net_states.append((0, self.colormap.copy()))
+
+                # TODO test if this really saves memory...
+                #  I think memory problems are in big graphs in networkx though (see init times)
                 counter += 1
 
 
+        end = time.time()
 
 
-        print('Simulation complete.')
+        print('Simulation complete. Simulation time : {}s.'.format(end-start))
 
     def do_event(self, event):
         time = event[0]
@@ -192,42 +226,61 @@ class Net(object):
         self.graph.nodes[id]['state'] = state
 
     def animate_last_sim(self):
-        assert self.net_states, "You need to run the simulation first!"
+        print("Generating animation...")
+        start = time.time()
 
+        assert self.net_states, "You need to run the simulation first!"
 
         fig = plt.figure()
         pos = self.pos
 
+        nodes = nx.draw_networkx_nodes(self.graph, pos, node_color=self.net_states[0][1], node_size=3)
+        edges = nx.draw_networkx_edges(self.graph, pos, width=0.1)
+
         # function that draws a single frame from a saved state
         def animate(idx):
-            net_state = self.net_states[idx]
+            nodes.set_color(self.net_states[idx][1])
+            edges = nx.draw_networkx_edges(self.graph, pos, width=0.1)
 
-            graph = net_state[0]
-            colormap = net_state[1]
+            return nodes,
+            # net_state = self.net_states[idx]
+
+            # graph = net_state[0]
+            # colormap = net_state[1]
             # fig.clf()
 
-            nx.draw(graph, node_color = colormap, pos = pos)
+            # nx.draw(graph, node_color = colormap, pos = pos)
+
 
 
         anim = animation.FuncAnimation(fig, animate, frames=len(self.net_states), interval=1000, blit=False)
 
         anim.save('test.mp4')
-        print('saved animation.')
+
+        end = time.time()
+        print('Saved animation. Time elapsed: {}s.'.format(end-start))
 
     # def animate(self,idx):
-    #     if idx == 3:
-    #         plt.scatter([1,2,3,4],[1,10,4,7])
-    #         return
     #     pos = nx.spring_layout(self.graph, seed=100)
     #     nx.draw(self.net_states[idx], node_color = self.colormap, pos = pos)
-    # def animate(self,i):
-    #     colors = ['r', 'b', 'g', 'y', 'w', 'm']
-    #     nx.draw_circular(self.graph, node_color=[random.choice(colors) for j in range(3)])
 
     # REMINDER:
-# heapq uses lists as binary trees! So to go through it descendingly means the sequence
-# 2k+2, 2k+1, 2(k-1)+2, ..., 1, 0 (i think)
-# this is important for the canceling edge!
+
+
+def color_to_int(colormap:dict):
+    out = []
+    for i in range(len(colormap)):
+        if colormap[i] == 'green':
+            out.append(0)
+        elif colormap[i] == 'yellow':
+            out.append(1)
+        elif colormap[i] == 'red':
+            out.append(2)
+        elif colormap[i] == 'grey':
+            out.append(3)
+        else:
+            raise Exception('Color not supported.')
+        return out
 
 
 
@@ -243,21 +296,13 @@ def heap_delete(h:list, i):
 
 
 if __name__ == '__main__':
-    net = Net(1000,0.15,123456)
+
+    net = Net(10000,0.0001,123456)
     # net.draw()
 
-
-
-    start = time.time()
     net.sim()
-    end = time.time()
 
-    print('Simulation time: {}s'.format(end-start))
+    # net.animate_last_sim()
 
-    start = time.time()
-    net.animate_last_sim()
-    end = time.time()
-
-    print('Animation time: {}s'.format(end-start))
 
 
