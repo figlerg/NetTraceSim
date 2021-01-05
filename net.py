@@ -8,12 +8,16 @@ import random
 import heapq
 import matplotlib.animation as animation
 import time
+from scipy.interpolate import interp1d
 
 p_i = 0.5  # probability of infection at contact
 t_i = 2  # incubation time
 t_r = 14  # recovery time
-t_c = 1  # rate of contacts
-max_time = 200
+t_c = 1  # time between contacts
+
+# NOTE: this is the same as the scale parameter in np.random.exponential! No inverse needed! Checked experimentally...
+
+resolution = 20 # days for each animation frame, abtastrate
 
 INFECTION = 0
 INFECTIOUS = 1
@@ -21,24 +25,48 @@ CONTACT = 2
 RECOVER = 3
 
 
+# update the counts in the events by adding these to self.count:
+susc2exp = np.asarray([-1,1,0,0,0], dtype=np.int32)
+exp2inf = np.asarray([0,-1,1,0,0], dtype=np.int32)
+inf2rec = np.asarray([0,0,-1,1,0], dtype=np.int32)
+inf2no_trans = np.asarray([0,0,-1,0,1], dtype=np.int32)
+no_trans2rec = np.asarray([0,0,0,1,-1], dtype=np.int32)
+
+
+
 class Net(object):
 
-    def __init__(self, n, p, seed):
+    def __init__(self, n, p, max_t, seed):
 
         print("Initializing network...")
+
         start = time.time()
 
-        self.n = n
-        # self.graph = nx.gnp_random_graph(n, p, seed = seed)
-        self.graph = nx.fast_gnp_random_graph(n, p, seed = seed)
-
-        self.colormap = ['green' for i in range(n)]
         np.random.seed(seed)
         # random.seed(seed)
 
 
+
+        self.n = n
+
+        # self.graph = nx.gnp_random_graph(n, p, seed = seed)
+        self.graph = nx.fast_gnp_random_graph(n, p, seed = seed)
+
+        self.colormap = ['green' for i in range(n)]
+
         self.event_list = []
         heapq.heapify(self.event_list)
+
+        self.max_t = max_t
+
+        # I dont want to deal with a whole mutable state list, so I only save the current count at regular intervals:
+        self.count = np.zeros([5,1], dtype=np.int32).flatten() # current state
+        # susceptible, exposed, infectious, recovered, transmission_disabled are the 5 rows
+
+        self.count[0] = n
+        self.counts = np.zeros([5, max_t//resolution], dtype=np.int32) # history, gets written in sim()
+
+
 
         self.net_states = [] # this is a list of nets at equidistant time steps
         # i use this for the animation
@@ -61,20 +89,28 @@ class Net(object):
     def infection(self, time, id):
 
         self.update_state(id,1) # exposed now
+        self.count += susc2exp
         self.colormap[id] = 'yellow'
         # print('Person #{} has been exposed at time {}'.format(id, time))
 
 
         # schedule infectious event
-        heapq.heappush(self.event_list, (time + t_i, INFECTIOUS, id))
+
+        t_i_random = np.random.exponential(scale=t_i, size=1)[0]
+        heapq.heappush(self.event_list, (time + t_i_random, INFECTIOUS, id))
 
     def infectious(self, time, id):
         # print('Person #{} started being infectious at time {}'.format(id, time))
         self.update_state(id,2)
+        self.count += exp2inf
         self.colormap[id] = 'red'
 
-        heapq.heappush(self.event_list, (time + t_c,CONTACT, id))
-        heapq.heappush(self.event_list, (time + t_r,RECOVER, id))
+        t_c_random = np.random.exponential(scale=t_c, size=1)[0]
+        t_r_random = np.random.exponential(scale=t_r, size=1)[0]
+
+
+        heapq.heappush(self.event_list, (time + t_c_random,CONTACT, id))
+        heapq.heappush(self.event_list, (time + t_r_random ,RECOVER, id))
 
 
     def contact(self, time, id):
@@ -105,7 +141,10 @@ class Net(object):
 
 
         if self.graph.nodes[id]['state'] == 2:
-            next_contact = (time+t_c, CONTACT, id)
+
+            t_c_random = np.random.exponential(scale=t_c, size=1)[0]
+
+            next_contact = (time+t_c_random, CONTACT, id)
             # if person is not infectious anymore, no need to schedule this
             heapq.heappush(self.event_list, next_contact)
         else:
@@ -116,9 +155,7 @@ class Net(object):
         # it can be used to interrupt said process should the patient recover in the meantime
 
 
-
     def recover(self, time, id):
-
         # cancel related contact event
         try:
             if self.graph.nodes[id]['latest_contact']:
@@ -141,9 +178,8 @@ class Net(object):
             pass
 
 
-
-
         self.update_state(id,3) # individuum is saved as recovered
+        self.count += inf2rec
         self.colormap[id] = 'grey'
         # print(str(id)+' has recovered.')
 
@@ -166,7 +202,7 @@ class Net(object):
         event = (0, INFECTION, 0) # ind. #0 is infected at t = 0
         heapq.heappush(self.event_list, event)
 
-        intervals = 2 # days for each animation frame
+        # intervals = 1 # days for each animation frame
         counter = 0
 
 
@@ -175,28 +211,52 @@ class Net(object):
 
             event = heapq.heappop(self.event_list)
 
-            if event[0] > max_time:
+            current_t = event[0]
+
+            if current_t > self.max_t:
                 break
 
-            self.do_event(event)
-
-            current_t = event[0]
-            if current_t >= counter * intervals:
-                # ims.append(self.draw())
-
-                # self.net_states.append((self.graph.copy(), self.colormap.copy()))
-                # self.net_states.append((0, color_to_int(self.colormap)))
+            # if it exceeds the current sampling point, the current counts are saved before doing the event (hold)
+            if current_t >= counter * resolution:
+                self.counts[:,counter] = self.count
                 self.net_states.append((0, self.colormap.copy()))
-
-                # TODO test if this really saves memory...
-                #  I think memory problems are in big graphs in networkx though (see init times)
                 counter += 1
+
+            self.do_event(event)
 
 
         end = time.time()
 
 
         print('Simulation complete. Simulation time : {}s.'.format(end-start))
+
+        self.plot_timeseries()
+
+    def plot_timeseries(self):
+        print('Plotting time series...')
+        n_counts = self.counts.shape[1]
+        ts = np.arange(start=0, stop=self.max_t, step=resolution)
+
+
+
+        # TODO this is not optimal... I would like the vertical lines to disappear
+        # from https://docs.scipy.org/doc/scipy/reference/tutorial/interpolate.html
+        # x = np.linspace(0, 10, num=11, endpoint=True)
+        x = ts
+        y = self.counts.T
+        # f1 = interp1d(x, y, kind='nearest')
+        f2 = interp1d(x, y, kind='previous', axis=0)
+        # f3 = interp1d(x, y, kind='next')
+        xnew = np.linspace(0, self.max_t-resolution, num=10001, endpoint=False)
+        # plt.plot(x, y, 'o')
+        plt.plot(xnew, f2(xnew))
+        # plt.legend(['data', 'nearest', 'previous', 'next'], loc='best')
+        plt.show()
+
+        # plt.plot(ts, self.counts.T)
+        # plt.show()
+
+
 
     def do_event(self, event):
         time = event[0]
@@ -272,41 +332,23 @@ class Net(object):
 
     # REMINDER:
 
-
-def color_to_int(colormap:dict):
-    out = []
-    for i in range(len(colormap)):
-        if colormap[i] == 'green':
-            out.append(0)
-        elif colormap[i] == 'yellow':
-            out.append(1)
-        elif colormap[i] == 'red':
-            out.append(2)
-        elif colormap[i] == 'grey':
-            out.append(3)
-        else:
-            raise Exception('Color not supported.')
-        return out
-
-
-
-
-# from https://stackoverflow.com/questions/10162679/python-delete-element-from-heap
-# this is O(logn)
 def heap_delete(h:list, i):
+    # from https://stackoverflow.com/questions/10162679/python-delete-element-from-heap
+    # this is O(logn)
     h.pop()
     if i < len(h):
         heapq._siftup(h, i)
         heapq._siftdown(h, 0, i)
 
 
-
 if __name__ == '__main__':
 
-    net = Net(n = 1000, p = 0.1, seed = 123)
+    net = Net(n = 1000, p = 0.1, seed = 123, max_t=100)
     # net.draw()
 
     net.sim(seed= 123)
+
+
 
     # net.animate_last_sim()
 
