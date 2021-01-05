@@ -23,7 +23,7 @@ RECOVER = 3
 
 class Net(object):
 
-    def __init__(self, n, p, seed = 12345):
+    def __init__(self, n, p, seed):
 
         print("Initializing network...")
         start = time.time()
@@ -33,8 +33,9 @@ class Net(object):
         self.graph = nx.fast_gnp_random_graph(n, p, seed = seed)
 
         self.colormap = ['green' for i in range(n)]
+        np.random.seed(seed)
+        # random.seed(seed)
 
-        random.seed(seed)
 
         self.event_list = []
         heapq.heapify(self.event_list)
@@ -80,7 +81,9 @@ class Net(object):
 
         friends = list(self.graph.neighbors(id))
         if friends:
-            contacted_friend = random.choice(friends)
+            # contacted_friend = random.choice(friends)
+            contacted_friend_idx = np.random.choice(len(friends),1)[0]
+            contacted_friend = friends[contacted_friend_idx]
         else:
             return
 
@@ -90,7 +93,8 @@ class Net(object):
         if self.graph.nodes[contacted_friend]['state'] == 0:
 
             # print('#' + str(id) + ' has had contact with #{}.'.format(contacted_friend))
-            u = random.uniform(0,1)
+            # u = random.uniform(0,1)
+            u = np.random.uniform()
 
             if u < p_i:
                 heapq.heappush(self.event_list, (time, INFECTION, contacted_friend))
@@ -149,8 +153,10 @@ class Net(object):
 
 # convenience:
 
-    def sim(self, animation = True):
+    def sim(self, seed, animation = True):
         # call first infection event
+
+        np.random.seed(seed)
 
         start = time.time()
 
@@ -297,10 +303,10 @@ def heap_delete(h:list, i):
 
 if __name__ == '__main__':
 
-    net = Net(10000,0.0001,123456)
+    net = Net(n = 1000, p = 0.1, seed = 123)
     # net.draw()
 
-    net.sim()
+    net.sim(seed= 123)
 
     # net.animate_last_sim()
 
