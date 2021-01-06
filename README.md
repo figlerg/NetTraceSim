@@ -7,4 +7,4 @@ Author: Felix Gigler
 Installation:
 	install miniconda, then (in Anaconda Terminal):
 
-	conda install numpy matplotlib networkx scipy
+	conda install numpy matplotlib networkx scipy ffmpeg

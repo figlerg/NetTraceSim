@@ -2,41 +2,20 @@
 
 import networkx as nx
 import numpy as np
-# from person import Person
 import matplotlib.pyplot as plt
-import random
 import heapq
 import matplotlib.animation as animation
 import time
 from scipy.interpolate import interp1d
 
-p_i = 0.5  # probability of infection at contact
-t_i = 2  # incubation time
-t_r = 14  # recovery time
-t_c = 1  # time between contacts
-
-# NOTE: this is the same as the scale parameter in np.random.exponential! No inverse needed! Checked experimentally...
-
-resolution = 20 # days for each animation frame, abtastrate
-
-INFECTION = 0
-INFECTIOUS = 1
-CONTACT = 2
-RECOVER = 3
-
-
-# update the counts in the events by adding these to self.count:
-susc2exp = np.asarray([-1,1,0,0,0], dtype=np.int32)
-exp2inf = np.asarray([0,-1,1,0,0], dtype=np.int32)
-inf2rec = np.asarray([0,0,-1,1,0], dtype=np.int32)
-inf2no_trans = np.asarray([0,0,-1,0,1], dtype=np.int32)
-no_trans2rec = np.asarray([0,0,0,1,-1], dtype=np.int32)
-
+from globals import *  # loading some variables and constants
 
 
 class Net(object):
 
     def __init__(self, n, p, max_t, seed):
+
+        # TODO try and decrease complexity, this seems convoluted
 
         print("Initializing network...")
 
@@ -72,30 +51,42 @@ class Net(object):
         # i use this for the animation
         self.pos = nx.spring_layout(self.graph, seed=seed)
 
-
         for id in range(n):
             # at first all are susceptible
             # print(net.nodes)
             # print(net.edges)
             self.graph.nodes[id]['state'] = 0
 
+        # TODO this is a little rough...
+        #  essentially I want to set a reset point because some of the values are changed in place and I need a fresh
+        #  start for each monte carlo. Resetting is done via the self.reset() function
+        self.init_state = {}
+        for key in self.__dict__.keys():
+            try:
+                self.init_state[key] = self.__dict__[key].copy()
+            except AttributeError:
+                # print(key)
+                self.init_state[key] = self.__dict__[key]
+
         end = time.time()
 
-        print("Network initialized. Time elapsed: {}s.".format(end-start))
+        print("Network initialized. Time elapsed: {}s.".format(end - start))
 
         # self.draw()
     # events:
 
     def infection(self, time, id):
 
-        self.update_state(id,1) # exposed now
+        self.update_state(id, 1)  # exposed now
         self.count += susc2exp
         self.colormap[id] = 'yellow'
         # print('Person #{} has been exposed at time {}'.format(id, time))
 
+        # there is a possibility that one individual gets several infection events scheduled to by different people
+        # for this i created a mode for the canceling edge that cancels all scheduled events:
+        self.cancel_event(id, INFECTION, all=True)
 
         # schedule infectious event
-
         t_i_random = np.random.exponential(scale=t_i, size=1)[0]
         heapq.heappush(self.event_list, (time + t_i_random, INFECTIOUS, id))
 
@@ -157,39 +148,42 @@ class Net(object):
 
     def recover(self, time, id):
         # cancel related contact event
+
         try:
             if self.graph.nodes[id]['latest_contact']:
-                copy = self.event_list.copy()
-
-                # TODO this could be faster, i can use heap structure to stop earlier right?
-                fitting_events = []
-                for i, event in enumerate(copy):
-                    if event[0] == 2 and event[2] == id:
-                        fitting_events.append((event[0], i))
-                        # with time and index i have all information needed to cancel
-                        # NEXT scheduled event with this id and type
-                cancel_prioritized = sorted(fitting_events, key= lambda x: x[0]) # sort for time
-                try:
-                    i = cancel_prioritized[0][1] # gets index of original heap
-                    heap_delete(self.event_list, i)
-                except IndexError: # no scheduled event that fits
-                    pass
-        except:
+                self.cancel_event(id, CONTACT, all=False)
+        except KeyError:
             pass
+        # try:
+        #     if self.graph.nodes[id]['latest_contact']:
+        #         copy = self.event_list.copy()
+        #
+        #         # TODO this could be faster, i can use heap structure to stop earlier right?
+        #         fitting_events = []
+        #         for i, event in enumerate(copy):
+        #             if event[0] == 2 and event[2] == id:
+        #                 fitting_events.append((event[0], i))
+        #                 # with time and index i have all information needed to cancel
+        #                 # NEXT scheduled event with this id and type
+        #         cancel_prioritized = sorted(fitting_events, key= lambda x: x[0]) # sort for time
+        #         try:
+        #             i = cancel_prioritized[0][1] # gets index of original heap
+        #             heap_delete(self.event_list, i)
+        #         except IndexError: # no scheduled event that fits
+        #             pass
+        # except:
+        #     pass
 
-
-        self.update_state(id,3) # individuum is saved as recovered
+        self.update_state(id, 3)  # individuum is saved as recovered
         self.count += inf2rec
         self.colormap[id] = 'grey'
         # print(str(id)+' has recovered.')
 
         # print('Contact process stopped due to recovery.')
 
+    # simulation
 
-
-# convenience:
-
-    def sim(self, seed, animation = True):
+    def sim(self, seed, animation=False):
         # call first infection event
 
         np.random.seed(seed)
@@ -198,14 +192,13 @@ class Net(object):
 
         print('Simulation started.')
 
-
-        event = (0, INFECTION, 0) # ind. #0 is infected at t = 0
+        event = (0, INFECTION, 0)  # ind. #0 is infected at t = 0
         heapq.heappush(self.event_list, event)
 
         # intervals = 1 # days for each animation frame
         counter = 0
 
-
+        # end_of_sim = -1
 
         while self.event_list:
 
@@ -218,36 +211,127 @@ class Net(object):
 
             # if it exceeds the current sampling point, the current counts are saved before doing the event (hold)
             if current_t >= counter * resolution:
-                self.counts[:,counter] = self.count
+                assert (
+                                   self.count >= 0).all() and self.count.sum() == self.n, 'Something went wrong, impossible states detected.'
+
+                self.counts[:, counter] = self.count
                 self.net_states.append((0, self.colormap.copy()))
                 counter += 1
 
             self.do_event(event)
 
+        end_of_sim = current_t  # this is where the simulation stopped. After that, states remain constant
+        for i in np.arange(start=counter, stop=self.counts.shape[1], dtype=int):
+            self.counts[:, i] = self.counts[:, i - 1]  # otherwise it is all 0 at some point
 
         end = time.time()
 
+        print('Simulation complete. Simulation time : {}s.'.format(end - start))
 
-        print('Simulation complete. Simulation time : {}s.'.format(end-start))
+        # self.plot_timeseries()
+        return self.counts
 
-        self.plot_timeseries()
+    def do_event(self, event):
+        time = event[0]
+        type = event[1]  # REARRANGED as (time, type, id) because heapq sorts only for first...
+        # TODO check whether i changed it everywhere...
+        id = event[2]
+        # events:
+        # 0:infection
+        # 1:infectious
+        # 2:contact
+        # 3:recovery
 
-    def plot_timeseries(self):
+        if type == 0:
+            self.infection(time, id)
+        elif type == 1:
+            self.infectious(time, id)
+        elif type == 2:
+            self.contact(time, id)
+        elif type == 3:
+            self.recover(time, id)
+        else:
+            raise Exception('This event type has not been implemented')
+
+    def cancel_event(self, id, event_id, all=False):
+        # the "all" parameter is here because for now I assume that all infection events must be canceled once
+        #  the infection has commenced TODO review
+        #  (so for an infected individual no other infection events shall occur
+        copy = self.event_list.copy()
+
+        fitting_events = []
+        for i, event in enumerate(copy):
+            if event[0] == event_id and event[2] == id:
+                fitting_events.append((event[0], i))
+                # with time and index i have all information needed to cancel
+                # NEXT scheduled event with this id and type
+
+        if all:  # want to delete all events of that type for that individual
+            indices = [i for bin, i in fitting_events]  # i want these gone
+            # https://stackoverflow.com/a/32744088 for using numpy to delete certain entries:
+            # copy = np.delete(copy, indices).tolist()
+
+            # now i want to delete the entries that need to be canceled from the list:
+            indices.reverse()
+            # traverse backwards because deleting the i-th entry would change the following indices
+            # NOTE: originally, they are ascending because of enumerate
+
+            for i in indices:
+                idx = indices(-i - 1)
+                heap_delete(self.event_list, idx)
+                # TODO this might actually be worse than just using del here and heapify in the end
+                #  I think this would be both O(n)?
+
+            # this is O(n) and by using siftdown and siftup each time i delete an entry i could make it faster, O(logn)
+            # however, I have to traverse the whole list anyways at the start so it will always be O(n)...
+            # heapq.heapify(copy)
+            # self.event_list = copy
+            return
+
+        else:  # # want to delete just next event of that type for that individual
+            # TODO this is not efficient
+            cancel_prioritized = sorted(fitting_events, key=lambda x: x[0])  # sort for time
+            try:
+                i = cancel_prioritized[0][1]  # gets index of original heap
+                heap_delete(self.event_list, i)
+            except IndexError:  # no scheduled event that fits
+                pass
+
+    def reset(self):
+        # see note in __init__. Short: reset to original state (deepcopy)
+        # TODO unsafe?
+        for key in self.init_state.keys():
+            if key != 'init_state':
+                try:
+                    self.__dict__[key] = self.init_state[key].copy()
+                except AttributeError:
+                    # print(key)
+                    self.__dict__[key] = self.init_state[key]
+
+    # visuals
+
+    def plot_timeseries(self, counts=None):
         print('Plotting time series...')
+
         n_counts = self.counts.shape[1]
         ts = np.arange(start=0, stop=self.max_t, step=resolution)
-
-
 
         # TODO this is not optimal... I would like the vertical lines to disappear
         # from https://docs.scipy.org/doc/scipy/reference/tutorial/interpolate.html
         # x = np.linspace(0, 10, num=11, endpoint=True)
         x = ts
-        y = self.counts.T
+
+        # by default, i use the classes last simulation results.
+        # but for monte carlo i want to be able to plot something manually as well
+        if isinstance(counts, np.ndarray):
+            y = counts.T
+        else:
+            y = self.counts.T  # in case counts is not given, take the ones saved from last simulation
+
         # f1 = interp1d(x, y, kind='nearest')
         f2 = interp1d(x, y, kind='previous', axis=0)
         # f3 = interp1d(x, y, kind='next')
-        xnew = np.linspace(0, self.max_t-resolution, num=10001, endpoint=False)
+        xnew = np.linspace(0, self.max_t - resolution, num=10001, endpoint=False)
         # plt.plot(x, y, 'o')
         plt.plot(xnew, f2(xnew))
         # plt.legend(['data', 'nearest', 'previous', 'next'], loc='best')
@@ -256,40 +340,12 @@ class Net(object):
         # plt.plot(ts, self.counts.T)
         # plt.show()
 
-
-
-    def do_event(self, event):
-        time = event[0]
-        type = event[1] # REARRANGED as (time, type, id) because heapq sorts only for first...
-        # TODO check whether i changed it everywhere...
-        id = event[2]
-        # events:
-            # 0:infection
-            # 1:infectious
-            # 2:contact
-            # 3:recovery
-
-
-        if type == 0:
-            self.infection(time,id)
-        elif type == 1:
-            self.infectious(time,id)
-        elif type == 2:
-            self.contact(time,id)
-        elif type == 3:
-            self.recover(time, id)
-        else:
-            raise Exception('This event type has not been implemented')
-
     def draw(self):
         pos = self.pos
         # i deliberately leave the seed fixed, maybe I want same positions for networks of equal size
         nx.draw(self.graph, node_color = self.colormap, pos = pos)
 
         plt.show()
-
-    def update_state(self, id, state):
-        self.graph.nodes[id]['state'] = state
 
     def animate_last_sim(self):
         print("Generating animation...")
@@ -317,20 +373,17 @@ class Net(object):
 
             # nx.draw(graph, node_color = colormap, pos = pos)
 
-
-
         anim = animation.FuncAnimation(fig, animate, frames=len(self.net_states), interval=1000, blit=False)
 
         anim.save('test.mp4')
 
         end = time.time()
-        print('Saved animation. Time elapsed: {}s.'.format(end-start))
+        print('Saved animation. Time elapsed: {}s.'.format(end - start))
 
-    # def animate(self,idx):
-    #     pos = nx.spring_layout(self.graph, seed=100)
-    #     nx.draw(self.net_states[idx], node_color = self.colormap, pos = pos)
+    # convenience:
 
-    # REMINDER:
+    def update_state(self, id, state):
+        self.graph.nodes[id]['state'] = state
 
 def heap_delete(h:list, i):
     # from https://stackoverflow.com/questions/10162679/python-delete-element-from-heap
