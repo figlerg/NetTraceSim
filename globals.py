@@ -8,14 +8,27 @@ t_i = 2  # incubation time
 t_r = 14  # recovery time
 t_c = 1  # time between contacts
 
+t_q = 4 # average time until infection is noticed
+
+quarantine_time = 10 # this should probably be a fixed time
+
 # NOTE: this is the same as the scale parameter in np.random.exponential! No inverse needed! Checked experimentally...
 
-resolution = 1  # days for each animation frame, abtastrate
+resolution = 1  # days for each animation frame, abtastrate (right now only ints are possible)
+# TODO maybe allow floats as well and use linspace instead of arange?
 
 INFECTION = 0
 INFECTIOUS = 1
 CONTACT = 2
 RECOVER = 3
+QUARANTINE = 4
+END_OF_QUARANTINE = 5
+
+SUSC_STATE = 0
+EXP_STATE = 1
+INF_STATE = 2
+REC_STATE = 3
+NO_TRANS_STATE = 4
 
 # update the counts in the events by adding these to self.count:
 susc2exp = np.asarray([-1, 1, 0, 0, 0], dtype=np.int32)
@@ -23,3 +36,4 @@ exp2inf = np.asarray([0, -1, 1, 0, 0], dtype=np.int32)
 inf2rec = np.asarray([0, 0, -1, 1, 0], dtype=np.int32)
 inf2no_trans = np.asarray([0, 0, -1, 0, 1], dtype=np.int32)
 no_trans2rec = np.asarray([0, 0, 0, 1, -1], dtype=np.int32)
+no_trans2inf = np.asarray([0, 0, 1, 0, -1], dtype=np.int32)
