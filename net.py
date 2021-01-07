@@ -24,8 +24,6 @@ class Net(object):
         np.random.seed(seed)
         # random.seed(seed)
 
-
-
         self.n = n
 
         # self.graph = nx.gnp_random_graph(n, p, seed = seed)
@@ -90,7 +88,7 @@ class Net(object):
         t_i_random = np.random.exponential(scale=t_i, size=1)[0]
         heapq.heappush(self.event_list, (time + t_i_random, INFECTIOUS, id))
 
-    def infectious(self, time, id):
+    def infectious(self, time, id, mode):
         # print('Person #{} started being infectious at time {}'.format(id, time))
         self.update_state(id,2)
         self.count += exp2inf
@@ -100,8 +98,13 @@ class Net(object):
         t_r_random = np.random.exponential(scale=t_r, size=1)[0]
 
 
+
         heapq.heappush(self.event_list, (time + t_c_random,CONTACT, id))
         heapq.heappush(self.event_list, (time + t_r_random ,RECOVER, id))
+
+        if mode == 'quarantine':
+            t_q_random = np.random.exponential(scale=t_q, size=1)[0]
+            heapq.heappush(self.event_list, (time + t_q_random ,QUARANTINE, id))
 
 
     def contact(self, time, id):
@@ -174,16 +177,53 @@ class Net(object):
         # except:
         #     pass
 
+        if self.graph.nodes[id]['state'] == NO_TRANS_STATE:
+            self.count += no_trans2rec
+        else:
+            self.count += inf2rec
+
         self.update_state(id, 3)  # individuum is saved as recovered
-        self.count += inf2rec
         self.colormap[id] = 'grey'
         # print(str(id)+' has recovered.')
 
         # print('Contact process stopped due to recovery.')
 
+
+    def quarantine(self, time, id):
+
+        # in my simple model it would be possible for someone to be already recovered when the quarantine event happens
+        # in this case, no quarantine is necessary (and it would not change anything anymore)
+        # TODO think about this logic
+        if self.graph.nodes[id]['state'] == REC_STATE:
+            return
+
+        self.update_state(id, NO_TRANS_STATE)  # update state to transmission disabled
+        self.count += inf2no_trans
+        self.colormap[id] = 'blue'
+
+        heapq.heappush(self.event_list, (time + quarantine_time,CONTACT, id))
+
+
+
+    def end_of_quarantine(self, time, id):
+        # TODO check whether this makes sense. Could also simply put them into recovered in the end.
+        #  also, probably one would do a test at end of quarantine?
+        if self.graph.nodes[id]['state'] == NO_TRANS_STATE:
+            # no recovery happened, so back to infectious.
+            self.update_state(id, INF_STATE)
+            t_c_random = np.random.exponential(scale=t_c, size=1)[0]
+            heapq.heappush(self.event_list, (time + t_c_random,CONTACT, id))
+            self.count += no_trans2rec
+        elif self.graph.nodes[id]['state'] == REC_STATE:
+            # already recovered
+            return
+        else:
+            raise Exception("Something went wrong, an end of quarantine was scheduled for id with invalid state")
+
+
     # simulation
 
-    def sim(self, seed, animation=False):
+    def sim(self, seed, animation=False, mode = None):
         # call first infection event
 
         np.random.seed(seed)
@@ -218,7 +258,7 @@ class Net(object):
                 self.net_states.append((0, self.colormap.copy()))
                 counter += 1
 
-            self.do_event(event)
+            self.do_event(event, mode)
 
         end_of_sim = current_t  # this is where the simulation stopped. After that, states remain constant
         for i in np.arange(start=counter, stop=self.counts.shape[1], dtype=int):
@@ -231,7 +271,7 @@ class Net(object):
         # self.plot_timeseries()
         return self.counts
 
-    def do_event(self, event):
+    def do_event(self, event, mode):
         time = event[0]
         type = event[1]  # REARRANGED as (time, type, id) because heapq sorts only for first...
         # TODO check whether i changed it everywhere...
@@ -245,11 +285,15 @@ class Net(object):
         if type == 0:
             self.infection(time, id)
         elif type == 1:
-            self.infectious(time, id)
+            self.infectious(time, id, mode=mode)
         elif type == 2:
             self.contact(time, id)
         elif type == 3:
             self.recover(time, id)
+        elif type == QUARANTINE:
+            self.quarantine(time, id)
+        elif type == END_OF_QUARANTINE:
+            self.end_of_quarantine(time,id)
         else:
             raise Exception('This event type has not been implemented')
 
@@ -396,10 +440,11 @@ def heap_delete(h:list, i):
 
 if __name__ == '__main__':
 
-    net = Net(n = 1000, p = 0.1, seed = 123, max_t=100)
+    net = Net(n = 100, p = 0.1, seed = 123, max_t=100)
     # net.draw()
 
     net.sim(seed= 123)
+
 
 
 

@@ -5,12 +5,12 @@ from net import Net
 import numpy as np
 
 
-def monte_carlo(net: Net, n):
+def monte_carlo(net: Net, n, mode = None):
     # net is input
     # run sim n times, saving the output in list
     results: List[np.ndarray] = []
     for i in range(n):
-        results.append(net.sim(seed=i).copy())
+        results.append(net.sim(seed=i, mode = mode).copy())
         # print(i)
         # net.plot_timeseries()
         net.reset()
@@ -25,7 +25,8 @@ def monte_carlo(net: Net, n):
 
 
 if __name__ == '__main__':
-    net = Net(n=1000, p=0.1, seed=123, max_t=100)
+    net = Net(n=100, p=0.1, seed=123, max_t=100)
     # net.draw()
 
     monte_carlo(net, 10)
+    monte_carlo(net,10,'quarantine')
