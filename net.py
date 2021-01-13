@@ -7,6 +7,7 @@ import heapq
 import matplotlib.animation as animation
 import time
 from scipy.interpolate import interp1d
+import math
 
 from globals import *  # loading some variables and constants
 
@@ -41,7 +42,7 @@ class Net(object):
         # susceptible, exposed, infectious, recovered, transmission_disabled are the 5 rows
 
         self.count[0] = n
-        self.counts = np.zeros([5, max_t//resolution], dtype=np.int32) # history, gets written in sim()
+        self.counts = np.zeros([5, math.floor(max_t/resolution)], dtype=np.int32) # history, gets written in sim()
 
 
 
@@ -354,8 +355,10 @@ class Net(object):
 
     # visuals
 
-    def plot_timeseries(self, counts=None):
+    def plot_timeseries(self, counts=None, save = None):
         print('Plotting time series...')
+
+        plt.clf()
 
         n_counts = self.counts.shape[1]
         ts = np.arange(start=0, stop=self.max_t, step=resolution)
@@ -379,7 +382,10 @@ class Net(object):
         # plt.plot(x, y, 'o')
         plt.plot(xnew, f2(xnew))
         # plt.legend(['data', 'nearest', 'previous', 'next'], loc='best')
-        plt.show()
+        if save:
+            plt.savefig(save)
+        else:
+            plt.show()
 
         # plt.plot(ts, self.counts.T)
         # plt.show()

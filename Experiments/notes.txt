@@ -1,0 +1,23 @@
+n1000p0.1 vs n1000p0.02
+	seems kind of counter-intutive: the one with a higher edge probability has more infections.
+	this is probably due to the infection mechanic: 
+	once not many people are susceptible any more, the probability of meeting an infected/exposed/etc is higher if everybody is connected
+
+	TODO does the mechanic make sense?
+
+TODO even at 30 iterations in monte carlo, the curve looks imperfect at times (see 250/0.025 plot).
+	maybe I should redo the network in each iteration as well? This is costly, though
+
+n1000p0.1 vs n250p0.4 vs n200p0.5 (same number of friends)
+	VERY interesting. quantitatively, these are extremely similar (all converge toward the same state when looking at the ratio of the compartments)
+	only difference is the speed of the epidemic- smaller population converges faster than higher population. But in the end, the same fraction of 
+		the population has been infected at some point.
+
+n1000p0.1 vs n2000p0.1
+	no real surprises there, higher population with equal chance of being friends results in a big, well connected network
+	everybody gets infected in the big net. Only interesting thing is that until a certain point in time, the curves look alike.
+	small populus stops then, while the big one continues to get infected
+
+
+
+	
