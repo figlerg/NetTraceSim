@@ -56,6 +56,9 @@ class Net(object):
             # print(net.edges)
             self.graph.nodes[id]['state'] = 0
 
+        nx.set_edge_attributes(self.graph, False, name = 'blocked')
+        nx.set_node_attributes(self.graph, [], name = 'contacts')
+
         # TODO this is a little rough...
         #  essentially I want to set a reset point because some of the values are changed in place and I need a fresh
         #  start for each monte carlo. Resetting is done via the self.reset() function
@@ -103,19 +106,29 @@ class Net(object):
         heapq.heappush(self.event_list, (time + t_c_random,CONTACT, id))
         heapq.heappush(self.event_list, (time + t_r_random ,RECOVER, id))
 
-        if mode == 'quarantine':
+        if mode == 'quarantine' or mode == 'tracing':
             t_q_random = np.random.exponential(scale=t_q, size=1)[0]
             heapq.heappush(self.event_list, (time + t_q_random ,QUARANTINE, id))
 
-
     def contact(self, time, id):
 
-        friends = list(self.graph.neighbors(id))
+        # friends = list(self.graph.neighbors(id))
+        # connections = list(self.graph.edges)
+        friends = list((friend for friend in self.graph.neighbors(id)
+                        if self.graph.edges[id, friend]['blocked'] == False))
+                # can only use edges that aren't blocked due to quarantine
+
+
+
         if friends:
             # contacted_friend = random.choice(friends)
             contacted_friend_idx = np.random.choice(len(friends),1)[0]
             contacted_friend = friends[contacted_friend_idx]
+            self.graph.nodes[id]['contacts'].append(contacted_friend)
         else:
+            t_c_random = np.random.exponential(scale=t_c, size=1)[0]
+            next_contact = (time+t_c_random, CONTACT, id)
+            heapq.heappush(self.event_list, next_contact)
             return
 
         # if self.graph.nodes[id]['state'] == 3:
@@ -148,7 +161,6 @@ class Net(object):
         self.graph.nodes[id]['latest_contact'] = next_contact
         # this stores a pointer to the latest contact process of this id OR FALSE IF NONE IS SCHEDULED
         # it can be used to interrupt said process should the patient recover in the meantime
-
 
     def recover(self, time, id):
         # cancel related contact event
@@ -189,37 +201,55 @@ class Net(object):
 
         # print('Contact process stopped due to recovery.')
 
+    def quarantine(self, time, id, mode = None):
 
-    def quarantine(self, time, id):
+
+        connections = list(((id,friend) for friend in self.graph.neighbors(id)))
+        for id,friend in connections:
+            self.graph.edges[id,friend]['blocked'] = True
 
         # in my simple model it would be possible for someone to be already recovered when the quarantine event happens
         # in this case, no quarantine is necessary (and it would not change anything anymore)
-        # TODO think about this logic
+        # TODO think about this logic. Specifically, if it really does not matter that no quarantine
+        #  is issued when the patient recovered
         if self.graph.nodes[id]['state'] == REC_STATE:
-            return
-
-        self.update_state(id, NO_TRANS_STATE)  # update state to transmission disabled
-        self.count += inf2no_trans
-        self.colormap[id] = 'blue'
-
-        heapq.heappush(self.event_list, (time + quarantine_time,CONTACT, id))
+            pass
+        else:
+            self.update_state(id, NO_TRANS_STATE)  # update state to transmission disabled
+            self.count += inf2no_trans
+            self.colormap[id] = 'blue'
 
 
+        heapq.heappush(self.event_list, (time + quarantine_time,END_OF_QUARANTINE, id))
+
+        if mode == 'tracing':
+            # this is scheduled immediately, but it takes some time to find and alert contacts (see tracing)
+            heapq.heappush(self.event_list, (time, TRACING, id))
 
     def end_of_quarantine(self, time, id):
-        # TODO check whether this makes sense. Could also simply put them into recovered in the end.
-        #  also, probably one would do a test at end of quarantine?
         if self.graph.nodes[id]['state'] == NO_TRANS_STATE:
-            # no recovery happened, so back to infectious.
-            self.update_state(id, INF_STATE)
-            t_c_random = np.random.exponential(scale=t_c, size=1)[0]
-            heapq.heappush(self.event_list, (time + t_c_random,CONTACT, id))
-            self.count += no_trans2rec
+            connections = list(((id,friend) for friend in self.graph.neighbors(id)))
+            for id,friend in connections:
+                self.graph.edges[id,friend]['blocked'] = False
+                # TODO this leaves a weird possibility: if person a and b both are quarantined,
+                #  the first one (say a) going out of quarantine would also re-enable the connection between
+                #  the two, even if b is still quarantined. Should not change much, though
+
+            # self.count += no_trans2rec
         elif self.graph.nodes[id]['state'] == REC_STATE:
             # already recovered
+            connections = list(((id,friend) for friend in self.graph.neighbors(id)))
+            for id,friend in connections:
+                self.graph.edges[id,friend]['blocked'] = False
             return
         else:
             raise Exception("Something went wrong, an end of quarantine was scheduled for id with invalid state")
+
+    def tracing(self, time, id):
+        contacts = self.graph.nodes[id]['contacts']
+        for contact in contacts:
+            t_t_random = np.random.exponential(scale=t_t, size=1)[0]
+            heapq.heappush(self.event_list, (time + t_t_random ,QUARANTINE, id))
 
 
     # simulation
@@ -286,15 +316,17 @@ class Net(object):
         if type == 0:
             self.infection(time, id)
         elif type == 1:
-            self.infectious(time, id, mode=mode)
+            self.infectious(time, id, mode)
         elif type == 2:
             self.contact(time, id)
         elif type == 3:
             self.recover(time, id)
         elif type == QUARANTINE:
-            self.quarantine(time, id)
+            self.quarantine(time, id, mode)
         elif type == END_OF_QUARANTINE:
             self.end_of_quarantine(time,id)
+        elif type == TRACING:
+            self.tracing(time, id)
         else:
             raise Exception('This event type has not been implemented')
 
@@ -322,7 +354,7 @@ class Net(object):
             # NOTE: originally, they are ascending because of enumerate
 
             for i in indices:
-                idx = indices(-i - 1)
+                idx = indices[-i - 1]
                 heap_delete(self.event_list, idx)
                 # TODO this might actually be worse than just using del here and heapify in the end
                 #  I think this would be both O(n)?
@@ -449,7 +481,7 @@ if __name__ == '__main__':
     net = Net(n = 100, p = 0.1, seed = 123, max_t=100)
     # net.draw()
 
-    net.sim(seed= 123)
+    net.sim(seed= 123, mode='quarantine')
 
 
 

@@ -14,7 +14,7 @@ from do_experiment import simple_experiment
 #experiments
 
 mc_iterations = 30 # how many simulations per monte carlo
-max_t = 100
+max_t = 200
 
 
 # 1 baseline, on average people should have 100 friends here
@@ -50,3 +50,13 @@ net, counts = simple_experiment(n,p,mc_iterations, max_t)
 n = 2000
 p = 0.1
 net, counts = simple_experiment(n,p,mc_iterations, max_t)
+
+
+# 6 same as 1, but with quarantine
+n = 1000
+p = 0.1
+net, counts = simple_experiment(n,p,mc_iterations, max_t, mode='quarantine')
+
+n = 1000
+p = 0.1
+net, counts = simple_experiment(n,p,mc_iterations, max_t, mode='tracing')

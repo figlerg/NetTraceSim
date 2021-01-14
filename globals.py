@@ -9,6 +9,7 @@ t_r = 14  # recovery time
 t_c = 1  # time between contacts
 
 t_q = 4 # average time until infection is noticed
+t_t = 2 # average time until contact is found and put into quarantine
 
 quarantine_time = 10 # this should probably be a fixed time
 
@@ -23,6 +24,7 @@ CONTACT = 2
 RECOVER = 3
 QUARANTINE = 4
 END_OF_QUARANTINE = 5
+TRACING = 6
 
 SUSC_STATE = 0
 EXP_STATE = 1
