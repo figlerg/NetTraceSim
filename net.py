@@ -3,6 +3,7 @@
 import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib
 import heapq
 import matplotlib.animation as animation
 import time
@@ -110,6 +111,12 @@ class Net(object):
             t_q_random = np.random.exponential(scale=t_q, size=1)[0]
             heapq.heappush(self.event_list, (time + t_q_random ,QUARANTINE, id))
 
+
+        if mode == 'tracing':
+            heapq.heappush(self.event_list, (time + t_q_random ,TRACING, id))
+            # I will simply do these two at the same time (when the infection is detected)
+            # the tracing event adds a little bit of time for the process of finding and alerting contacts
+
     def contact(self, time, id):
 
         # friends = list(self.graph.neighbors(id))
@@ -201,7 +208,7 @@ class Net(object):
 
         # print('Contact process stopped due to recovery.')
 
-    def quarantine(self, time, id, mode = None):
+    def quarantine(self, time, id):
 
 
         connections = list(((id,friend) for friend in self.graph.neighbors(id)))
@@ -209,47 +216,39 @@ class Net(object):
             self.graph.edges[id,friend]['blocked'] = True
 
         # in my simple model it would be possible for someone to be already recovered when the quarantine event happens
-        # in this case, no quarantine is necessary (and it would not change anything anymore)
-        # TODO think about this logic. Specifically, if it really does not matter that no quarantine
-        #  is issued when the patient recovered
+        # in this case, the color won't change to blue (because no contact event will ever happen anyways)
         if self.graph.nodes[id]['state'] == REC_STATE:
             pass
         else:
-            self.update_state(id, NO_TRANS_STATE)  # update state to transmission disabled
-            self.count += inf2no_trans
+            # self.update_state(id, NO_TRANS_STATE)  # update state to transmission disabled
+            # self.count += inf2no_trans
             self.colormap[id] = 'blue'
 
 
         heapq.heappush(self.event_list, (time + quarantine_time,END_OF_QUARANTINE, id))
 
-        if mode == 'tracing':
-            # this is scheduled immediately, but it takes some time to find and alert contacts (see tracing)
-            heapq.heappush(self.event_list, (time, TRACING, id))
+
 
     def end_of_quarantine(self, time, id):
-        if self.graph.nodes[id]['state'] == NO_TRANS_STATE:
-            connections = list(((id,friend) for friend in self.graph.neighbors(id)))
-            for id,friend in connections:
+        connections = list(((id,friend) for friend in self.graph.neighbors(id)))
+        for id,friend in connections:
+            if self.colormap[friend] != 'blue':
+                # this should keep connections blocked if the other side is in quarantine
                 self.graph.edges[id,friend]['blocked'] = False
-                # TODO this leaves a weird possibility: if person a and b both are quarantined,
-                #  the first one (say a) going out of quarantine would also re-enable the connection between
-                #  the two, even if b is still quarantined. Should not change much, though
+            # TODO this (no if clause)
+            #  leaves a weird possibility: if person a and b both are quarantined,
+            #  the first one (say a) going out of quarantine would also re-enable the connection between
+            #  the two, even if b is still quarantined. Should not change much, though.
+            #  OK THIS DEFINITELY MATTERS. leaving the if clause out means more people get infected than
+            #  without tracing...
 
-            # self.count += no_trans2rec
-        elif self.graph.nodes[id]['state'] == REC_STATE:
-            # already recovered
-            connections = list(((id,friend) for friend in self.graph.neighbors(id)))
-            for id,friend in connections:
-                self.graph.edges[id,friend]['blocked'] = False
-            return
-        else:
-            raise Exception("Something went wrong, an end of quarantine was scheduled for id with invalid state")
 
     def tracing(self, time, id):
         contacts = self.graph.nodes[id]['contacts']
         for contact in contacts:
             t_t_random = np.random.exponential(scale=t_t, size=1)[0]
             heapq.heappush(self.event_list, (time + t_t_random ,QUARANTINE, id))
+        contacts.clear()
 
 
     # simulation
@@ -322,7 +321,7 @@ class Net(object):
         elif type == 3:
             self.recover(time, id)
         elif type == QUARANTINE:
-            self.quarantine(time, id, mode)
+            self.quarantine(time, id)
         elif type == END_OF_QUARANTINE:
             self.end_of_quarantine(time,id)
         elif type == TRACING:
@@ -434,7 +433,7 @@ class Net(object):
         start = time.time()
 
         assert self.net_states, "You need to run the simulation first!"
-
+        matplotlib.interactive(False)
         fig = plt.figure()
         pos = self.pos
 
@@ -444,7 +443,7 @@ class Net(object):
         # function that draws a single frame from a saved state
         def animate(idx):
             nodes.set_color(self.net_states[idx][1])
-            edges = nx.draw_networkx_edges(self.graph, pos, width=0.1)
+            # edges = nx.draw_networkx_edges(self.graph, pos, width=0.1)
 
             return nodes,
             # net_state = self.net_states[idx]
@@ -458,6 +457,7 @@ class Net(object):
         anim = animation.FuncAnimation(fig, animate, frames=len(self.net_states), interval=1000, blit=False)
 
         anim.save('test.mp4')
+        plt.close(fig)
 
         end = time.time()
         print('Saved animation. Time elapsed: {}s.'.format(end - start))

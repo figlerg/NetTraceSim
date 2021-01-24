@@ -5,13 +5,13 @@ import numpy as np
 
 p_i = 0.5  # probability of infection at contact
 t_i = 2  # incubation time
-t_r = 14  # recovery time
+t_r = 10  # recovery time
 t_c = 1  # time between contacts
 
-t_q = 4 # average time until infection is noticed
-t_t = 2 # average time until contact is found and put into quarantine
+t_q = 3 # average time until infection is noticed
+t_t = 1 # average time until contact is found and put into quarantine
 
-quarantine_time = 10 # this should probably be a fixed time
+quarantine_time = 14 # this should probably be a fixed time
 
 # NOTE: this is the same as the scale parameter in np.random.exponential! No inverse needed! Checked experimentally...
 

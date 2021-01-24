@@ -20,4 +20,5 @@ n1000p0.1 vs n2000p0.1
 
 
 
-	
+MECHANICS:
+	- right now, quarantine could end before person is recovered (random variables). Should I assume the quarantine ends only with a negative test?

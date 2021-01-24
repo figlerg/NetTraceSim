@@ -10,10 +10,11 @@ def monte_carlo(net: Net, n, mode = None):
     # run sim n times, saving the output in list
     results: List[np.ndarray] = []
     for i in range(n):
+        net.reset()
         results.append(net.sim(seed=i, mode = mode).copy())
         # print(i)
         # net.plot_timeseries()
-        net.reset()
+
     # compute mean
 
     mean = np.zeros(results[0].shape)
