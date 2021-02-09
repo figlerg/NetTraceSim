@@ -31,6 +31,15 @@ class Net(object):
         # self.graph = nx.gnp_random_graph(n, p, seed = seed)
         self.graph = nx.fast_gnp_random_graph(n, p, seed = seed)
 
+        if p == 0:
+            print('Warning: p = 0, so the graph will not be checked for connectedness.')
+        else:
+            while not nx.is_connected(self.graph):
+                # I only want connected graphs, otherwise i cannot really compare
+                seed += 1
+                self.graph = nx.fast_gnp_random_graph(n, p, seed = seed)
+            print(seed)
+
         self.colormap = ['green' for i in range(n)]
 
         self.event_list = []
@@ -43,6 +52,7 @@ class Net(object):
         # susceptible, exposed, infectious, recovered, transmission_disabled are the 5 rows
 
         self.count[0] = n
+        # TODO delete last row, this count is deprecated
         self.counts = np.zeros([5, math.floor(max_t/resolution)], dtype=np.int32) # history, gets written in sim()
 
 

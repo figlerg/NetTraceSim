@@ -2,6 +2,7 @@ import os
 import pickle
 from net import Net
 from montecarlo import monte_carlo
+from globals import *
 
 
 
@@ -53,4 +54,33 @@ def simple_experiment(n,p,mc_iterations, max_t, mode = None, force_recompute = F
 
             net.plot_timeseries(counts, save= os.path.join(dirname, tag+'_vis.png'))
 
-    return (net, counts)
+    exposed = counts[EXP_STATE,:]
+    infected = counts[INF_STATE,:]
+    ep_curve = exposed + infected
+
+    # compute when the peak happens and what the number of infected is then
+    t_peak = np.argmax(ep_curve,axis=0)
+    peak_height = ep_curve[t_peak]
+
+    # compute the ratio of all exposed people at end of sim to the number of indiv.
+    # (also check heuristically whether an equilibrium has been reached
+
+    recovered = counts[REC_STATE,:]
+    virus_contacts = ep_curve + recovered
+
+    sensitivity = max(1, n/100) # increasing divisor makes this more sensitive
+    equilib_flag = abs(virus_contacts[-1] - virus_contacts[-2]) < sensitivity # just a heuristic, see whether roc is low
+
+    durchseuchung = virus_contacts[-1] / n
+
+    return (net, counts, t_peak, peak_height, equilib_flag, durchseuchung)
+
+
+def vary_p(n, mc_iterations, max_t, mode = None, force_recompute = False, path = None):
+    # here I want to systematically check what varying the edge probability does. Should return something like a 1d heatmap?
+    # return value should use one of the values t_peak, peak_height, equilib_flag, durchseuchung
+
+    for p in np.linspace(0,1, endpoint=True, num=10):
+        net, counts, t_peak, peak_height, equilib_flag, durchseuchung = simple_experiment(n,p,mc_iterations,max_t,mode, path = path)
+
+

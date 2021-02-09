@@ -1,9 +1,8 @@
 n1000p0.1 vs n1000p0.02
-	seems kind of counter-intutive: the one with a higher edge probability has more infections.
-	this is probably due to the infection mechanic: 
-	once not many people are susceptible any more, the probability of meeting an infected/exposed/etc is higher if everybody is connected
+	the curve is just a little flatter with low p, but all in all not a lot of difference between "more social" 
+	and "less social" population
 
-	TODO does the mechanic make sense?
+	TODO does the mechanic make sense? (each contact is one friend sampled randomly from the available friends)
 
 TODO even at 30 iterations in monte carlo, the curve looks imperfect at times (see 250/0.025 plot).
 	maybe I should redo the network in each iteration as well? This is costly, though

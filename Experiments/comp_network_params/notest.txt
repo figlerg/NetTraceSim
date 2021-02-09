@@ -1,0 +1,7 @@
+1) same n/p ratio (meaning same average nb of friends) seems to result in very similar results. 
+	smaller population has a higher rate of change, but in the end the same fraction of people is infected
+
+2) n1000p0.1 vs n2000p0.1 vs n2000p0.05: Higher population is thoroughly infected (worse outcome for 
+	higher population that is well connected. Weirdly, at 2000 pop. suddenly the p makes a real difference
+
+THIS IS WEIRD: only at n2000p0.1 the situation is clearly different. before that, all simulations have very similar results
