@@ -1,7 +1,6 @@
 # code is in net.py and montecarlo.py
 
 from net import Net
-from montecarlo import monte_carlo
 import pickle
 from do_experiment import simple_experiment
 
@@ -11,8 +10,8 @@ from do_experiment import simple_experiment
 
 
 
-# #experiments
-#
+#experiments
+
 # mc_iterations = 30 # how many simulations per monte carlo
 # max_t = 200
 #
@@ -21,7 +20,8 @@ from do_experiment import simple_experiment
 # n = 1000
 # p = 0.1
 # # if nothing happens, old objects are probably loaded from before! Look in Experiments.
-# net, counts, t_peak, peak_height, equilib_flag, durchseuchung = simple_experiment(n,p,mc_iterations, max_t)
+# # net, counts, t_peak, peak_height, equilib_flag, durchseuchung = simple_experiment(n,p,mc_iterations, max_t)
+# net, counts, t_peak, peak_height, equilib_flag, durchseuchung = simple_experiment(n,p,mc_iterations, max_t, force_recompute=True)
 #
 #
 #
@@ -83,7 +83,7 @@ from do_experiment import simple_experiment
 
 exp_8_path = r"C:\Users\giglerf\Google Drive\Seminar_Networks\Experiments\corner_cases"
 
-mc_iterations = 3
+mc_iterations = 15
 max_t = 200
 
 # n = 1000
@@ -94,9 +94,9 @@ max_t = 200
 # p = 1
 # net, counts, t_peak, peak_height, equilib_flag, durchseuchung = simple_experiment(n,p,mc_iterations, max_t, force_recompute=False, path=exp_8_path)
 
-n = 1000
-p = 1
-net, counts, t_peak, peak_height, equilib_flag, durchseuchung = simple_experiment(n,p,mc_iterations, max_t, force_recompute=False, path=exp_8_path)
-
-print([t_peak, peak_height, equilib_flag, durchseuchung])
+# n = 100
+# p = 0.1
+# net, counts, t_peak, peak_height, equilib_flag, durchseuchung = simple_experiment(n,p,mc_iterations, max_t, force_recompute=False, path=exp_8_path)
+#
+# print([t_peak, peak_height, equilib_flag, durchseuchung])
 

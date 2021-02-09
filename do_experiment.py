@@ -1,8 +1,8 @@
 import os
 import pickle
 from net import Net
-from montecarlo import monte_carlo
 from globals import *
+import matplotlib.pyplot as plt
 
 
 
@@ -24,13 +24,13 @@ def simple_experiment(n,p,mc_iterations, max_t, mode = None, force_recompute = F
     if force_recompute:
         # if false, it looks at saved experiments and reuses those
         net = Net(n=n, p=p, seed=123, max_t=max_t)
-        counts = monte_carlo(net, 10, mode=mode)
+        counts = net.monte_carlo(mc_iterations, mode=mode)
         with open(os.path.join(dirname,tag+'_net.p'),'wb') as f:
             pickle.dump(net, f)
         with open(os.path.join(dirname,tag+'_counts.p'),'wb') as f:
             pickle.dump(counts,f)
 
-        net.plot_timeseries(counts, save= os.path.join(dirname, tag+'_vis.png'))
+        # net.plot_timeseries(counts, save= os.path.join(dirname, tag+'_vis.png'))
 
     else:
         try:
@@ -46,13 +46,13 @@ def simple_experiment(n,p,mc_iterations, max_t, mode = None, force_recompute = F
 
         except FileNotFoundError:
             net = Net(n=n, p=p, seed=123, max_t=max_t)
-            counts = monte_carlo(net, 10, mode=mode)
+            counts = net.monte_carlo(mc_iterations, mode=mode)
             with open(os.path.join(dirname,tag+'_net.p'),'wb') as f:
                 pickle.dump(net, f)
             with open(os.path.join(dirname,tag+'_counts.p'),'wb') as f:
                 pickle.dump(counts,f)
 
-            net.plot_timeseries(counts, save= os.path.join(dirname, tag+'_vis.png'))
+            # net.plot_timeseries(counts, save= os.path.join(dirname, tag+'_vis.png'))
 
     exposed = counts[EXP_STATE,:]
     infected = counts[INF_STATE,:]
@@ -76,11 +76,51 @@ def simple_experiment(n,p,mc_iterations, max_t, mode = None, force_recompute = F
     return (net, counts, t_peak, peak_height, equilib_flag, durchseuchung)
 
 
-def vary_p(n, mc_iterations, max_t, mode = None, force_recompute = False, path = None):
+def vary_p(res, n, mc_iterations, max_t, mode = None, force_recompute = False, path = None):
     # here I want to systematically check what varying the edge probability does. Should return something like a 1d heatmap?
     # return value should use one of the values t_peak, peak_height, equilib_flag, durchseuchung
 
-    for p in np.linspace(0,1, endpoint=True, num=10):
-        net, counts, t_peak, peak_height, equilib_flag, durchseuchung = simple_experiment(n,p,mc_iterations,max_t,mode, path = path)
+    # res parameter defines how many points on [0,1] are used
+    res = res-1 # silly, but for me it makes more sense to create n values for res = n (linspace creates n+1 with endpoint)
+    peak_times = np.ndarray(res)
+    peak_heights = np.ndarray(res)
+    # flags = np.ndarray(res)
+    durchseuchungen = np.ndarray(res)
+
+    ps = np.linspace(0,1, endpoint=True, num=res)
+
+    for i,p in enumerate(ps):
+        net, counts, t_peak, peak_height, equilib_flag, durchseuchung = \
+            simple_experiment(n,p,mc_iterations,max_t,mode, path = path, force_recompute = force_recompute)
+
+        peak_times[i] = t_peak
+        peak_heights[i] = peak_height
+        durchseuchungen[i] = durchseuchung
+
+    fig, axes = plt.subplots(3,1, sharex=True)
+    # fig.subplots_adjust(wspace = 0.5)
+    ax1, ax2, ax3 = axes
 
 
+    ax1.plot(ps,peak_times)
+    # ax1.set_xlabel('p')
+    ax1.set_ylabel('peak-times')
+
+    ax2.plot(ps,peak_heights)
+    # ax2.set_xlabel('p')
+    ax2.set_ylabel('peak-height')
+
+    ax3.plot(ps,durchseuchungen)
+    # ax3.set_xlabel('p')
+    ax3.set_ylabel('percentage of affected')
+    ax3.set_xlabel('p')
+    ax3.set_xticks(ps)
+    plt.show()
+
+
+
+
+
+
+if __name__ == '__main__':
+    vary_p(res=20,n=100, mc_iterations=30, max_t=200, force_recompute=False)

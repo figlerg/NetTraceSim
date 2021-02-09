@@ -9,6 +9,7 @@ import matplotlib.animation as animation
 import time
 from scipy.interpolate import interp1d
 import math
+from typing import List
 
 from globals import *  # loading some variables and constants
 
@@ -20,25 +21,30 @@ class Net(object):
         # TODO try and decrease complexity, this seems convoluted
 
         print("Initializing network...")
-
         start = time.time()
 
         np.random.seed(seed)
         # random.seed(seed)
 
         self.n = n
+        self.p = p
 
         # self.graph = nx.gnp_random_graph(n, p, seed = seed)
         self.graph = nx.fast_gnp_random_graph(n, p, seed = seed)
 
         if p == 0:
             print('Warning: p = 0, so the graph will not be checked for connectedness.')
+            self.graph = nx.fast_gnp_random_graph(n, p, seed = seed)
+            self.last_seed = seed
         else:
             while not nx.is_connected(self.graph):
                 # I only want connected graphs, otherwise i cannot really compare
                 seed += 1
                 self.graph = nx.fast_gnp_random_graph(n, p, seed = seed)
-            print(seed)
+            # print(seed)
+            else:
+                self.last_seed = seed # this is the seed that was used.
+                # I save this so I can choose a different one when I want to create a new net in mc
 
         self.colormap = ['green' for i in range(n)]
 
@@ -59,7 +65,12 @@ class Net(object):
 
         self.net_states = [] # this is a list of nets at equidistant time steps
         # i use this for the animation
-        self.pos = nx.spring_layout(self.graph, seed=seed)
+
+        # for comparison, even new network structures use same layout (this only writes self.pos once, at start)
+        try:
+            a = self.pos # TODO this and the hard option of reset() is rather quick & dirty
+        except AttributeError:
+            self.pos = nx.spring_layout(self.graph, seed=seed)
 
         for id in range(n):
             # at first all are susceptible
@@ -383,16 +394,40 @@ class Net(object):
             except IndexError:  # no scheduled event that fits
                 pass
 
-    def reset(self):
-        # see note in __init__. Short: reset to original state (deepcopy)
+    def monte_carlo(self, n, mode = None):
+        # net is input
+        # run sim n times, saving the output in list
+        results: List[np.ndarray] = []
+        for i in range(n):
+            redo = not bool((i + 1)%redo_net) # redo_net is in globals.py, every i iterations net is changed as well
+            self.reset(hard = redo)
+            results.append(self.sim(seed=i, mode = mode).copy())
+
+
+        # compute mean
+        mean = np.zeros(results[0].shape)
+        for counts in results:
+            mean += counts
+        mean /= len(results)
+
+        return mean
+
+
+    def reset(self, hard = False):
+        # see note in __init__. Short: reset to original state (deepcopy), OR redo whole network
         # TODO unsafe?
-        for key in self.init_state.keys():
-            if key != 'init_state':
-                try:
-                    self.__dict__[key] = self.init_state[key].copy()
-                except AttributeError:
-                    # print(key)
-                    self.__dict__[key] = self.init_state[key]
+        if hard:
+            self.__init__(self.n, self.p, self.max_t, self.last_seed + 1)
+            # this overwrites the network with a new one of different seed (as opposed to just jumping to save point)
+        else:
+            for key in self.init_state.keys():
+                if key != 'init_state':
+                    try:
+                        self.__dict__[key] = self.init_state[key].copy()
+                    except AttributeError:
+                        # print(key)
+                        self.__dict__[key] = self.init_state[key]
+
 
     # visuals
 

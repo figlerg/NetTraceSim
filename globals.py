@@ -18,6 +18,9 @@ quarantine_time = 14 # this should probably be a fixed time
 resolution = 1  # days for each animation frame, abtastrate (right now only ints are possible)
 # TODO maybe allow floats as well and use linspace instead of arange?
 
+redo_net = 3 # every i iterations, monte carlo also changes network
+
+
 INFECTION = 0
 INFECTIOUS = 1
 CONTACT = 2
