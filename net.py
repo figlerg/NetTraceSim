@@ -1,7 +1,6 @@
 # try to use whole network as class that runs in environment
 
 import networkx as nx
-import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
 import heapq
@@ -12,11 +11,12 @@ import math
 from typing import List
 
 from globals import *  # loading some variables and constants
+from helpers import heap_delete
 
 
 class Net(object):
 
-    def __init__(self, n, p, max_t, seed):
+    def __init__(self, n, p, p_i, max_t, seed):
 
         # TODO try and decrease complexity, this seems convoluted
 
@@ -28,6 +28,7 @@ class Net(object):
 
         self.n = n
         self.p = p
+        self.p_i = p_i
 
         # self.graph = nx.gnp_random_graph(n, p, seed = seed)
         self.graph = nx.fast_gnp_random_graph(n, p, seed = seed)
@@ -168,7 +169,7 @@ class Net(object):
             # u = random.uniform(0,1)
             u = np.random.uniform()
 
-            if u < p_i:
+            if u < self.p_i:
                 heapq.heappush(self.event_list, (time, INFECTION, contacted_friend))
         else:
             pass  # if in any other state than susceptible, this contact does not matter
@@ -248,8 +249,6 @@ class Net(object):
 
         heapq.heappush(self.event_list, (time + quarantine_time,END_OF_QUARANTINE, id))
 
-
-
     def end_of_quarantine(self, time, id):
         connections = list(((id,friend) for friend in self.graph.neighbors(id)))
         for id,friend in connections:
@@ -263,7 +262,6 @@ class Net(object):
             #  OK THIS DEFINITELY MATTERS. leaving the if clause out means more people get infected than
             #  without tracing...
 
-
     def tracing(self, time, id):
         contacts = self.graph.nodes[id]['contacts']
         for contact in contacts:
@@ -274,7 +272,7 @@ class Net(object):
 
     # simulation
 
-    def sim(self, seed, animation=False, mode = None):
+    def sim(self, seed, mode = None):
         # call first infection event
 
         np.random.seed(seed)
@@ -412,12 +410,11 @@ class Net(object):
 
         return mean
 
-
     def reset(self, hard = False):
         # see note in __init__. Short: reset to original state (deepcopy), OR redo whole network
         # TODO unsafe?
         if hard:
-            self.__init__(self.n, self.p, self.max_t, self.last_seed + 1)
+            self.__init__(self.n, self.p, self.p_i, self.max_t, self.last_seed + 1)
             # this overwrites the network with a new one of different seed (as opposed to just jumping to save point)
         else:
             for key in self.init_state.keys():
@@ -512,21 +509,81 @@ class Net(object):
     def update_state(self, id, state):
         self.graph.nodes[id]['state'] = state
 
-def heap_delete(h:list, i):
-    # from https://stackoverflow.com/questions/10162679/python-delete-element-from-heap
-    # this is O(logn)
-    h.pop()
-    if i < len(h):
-        heapq._siftup(h, i)
-        heapq._siftdown(h, 0, i)
+    # misc
+
+    def alter_clustering_coeff(self, target, epsilon):
+        # to make less homogenous networks, this function redistributes edges until sufficiently close to goal
+
+        current_coeff = nx.average_clustering(self.graph)
+
+        budget = 10000
+        counter = 0
+
+        while abs(current_coeff - target) > epsilon and counter < budget:
+            a,b = np.random.randint(0, high=self.n, size=2, dtype=int)
+
+            neighbors_a = list(self.graph.neighbors(a))
+            neighbors_b = list(self.graph.neighbors(b))
+
+
+            if target > current_coeff:
+                # currently coeff is too low
+
+                if len(neighbors_a) > len(neighbors_b):
+                    # a gets edge from b to increase coeff
+                    c = np.random.choice(neighbors_b)
+                    if (not c in neighbors_a) and len(neighbors_b) != 1:
+                        # only move an edge when no edge between new partners exist AND at least 1 edge would be left
+
+                        self.graph.remove_edge(b,c)
+                        self.graph.add_edge(a,c)
+                        current_coeff = nx.average_clustering(self.graph)
+                else:
+                    # b gets edge from a
+                    c = np.random.choice(neighbors_a)
+                    if (not c in neighbors_b) and len(neighbors_a) != 1:
+                        # only move an edge when no edge between new partners exist AND at least 1 edge would be left
+                        self.graph.remove_edge(a,c)
+                        self.graph.add_edge(b,c)
+                        current_coeff = nx.average_clustering(self.graph)
+
+            else:
+                # coeff is too high
+                if len(neighbors_b) > len(neighbors_a): # This is the only different line, everything is flipped
+                    # a gets edge from b to increase coeff
+                    c = np.random.choice(neighbors_b)
+                    if (not c in neighbors_a) and len(neighbors_b) != 1:
+                        # only move an edge when no edge between new partners exist AND at least 1 edge would be left
+                        self.graph.remove_edge(b,c)
+                        self.graph.add_edge(a,c)
+                        current_coeff = nx.average_clustering(self.graph)
+                else:
+                    # b gets edge from a
+                    c = np.random.choice(neighbors_a)
+                    if (not c in neighbors_b) and len(neighbors_a) != 1:
+                        # only move an edge when no edge between new partners exist AND at least 1 edge would be left
+                        self.graph.remove_edge(a,c)
+                        self.graph.add_edge(b,c)
+                        current_coeff = nx.average_clustering(self.graph)
+
+            counter += 1
+        # print(counter)
+        # print(nx.average_clustering(self.graph))
+
+        return(current_coeff)
+
+
 
 
 if __name__ == '__main__':
-
-    net = Net(n = 100, p = 0.1, seed = 123, max_t=100)
+    p_i = 0.5
+    net = Net(n = 100, p_i=p_i, p = 0.1, seed = 123, max_t=100)
     # net.draw()
 
-    net.sim(seed= 123, mode='quarantine')
+    # net.sim(seed= 123, mode='quarantine')
+
+    print(net.alter_clustering_coeff(0.09, 0.001))
+
 
 
 

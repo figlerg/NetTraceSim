@@ -3,7 +3,7 @@
 
 import numpy as np
 
-p_i = 0.5  # probability of infection at contact
+# p_i = 0.5  # probability of infection at contact # TODO didnt want this global anymore, change everywhere
 t_i = 2  # incubation time
 t_r = 10  # recovery time
 t_c = 1  # time between contacts
