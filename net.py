@@ -16,7 +16,7 @@ from helpers import heap_delete
 
 class Net(object):
 
-    def __init__(self, n, p, p_i, max_t, seed):
+    def __init__(self, n, p, p_i, max_t, seed, clustering_target = None):
 
         # TODO try and decrease complexity, this seems convoluted
 
@@ -29,6 +29,7 @@ class Net(object):
         self.n = n
         self.p = p
         self.p_i = p_i
+        self.clustering_target = clustering_target
 
         # self.graph = nx.gnp_random_graph(n, p, seed = seed)
         self.graph = nx.fast_gnp_random_graph(n, p, seed = seed)
@@ -46,6 +47,9 @@ class Net(object):
             else:
                 self.last_seed = seed # this is the seed that was used.
                 # I save this so I can choose a different one when I want to create a new net in mc
+
+        if self.clustering_target:
+            self.alter_clustering_coeff(clustering_target,clustering_epsilon)
 
         self.colormap = ['green' for i in range(n)]
 
@@ -399,6 +403,8 @@ class Net(object):
         for i in range(n):
             redo = not bool((i + 1)%redo_net) # redo_net is in globals.py, every i iterations net is changed as well
             self.reset(hard = redo)
+            if redo:
+                print(self.clustering())
             results.append(self.sim(seed=i, mode = mode).copy())
 
 
@@ -414,7 +420,7 @@ class Net(object):
         # see note in __init__. Short: reset to original state (deepcopy), OR redo whole network
         # TODO unsafe?
         if hard:
-            self.__init__(self.n, self.p, self.p_i, self.max_t, self.last_seed + 1)
+            self.__init__(self.n, self.p, self.p_i, self.max_t, self.last_seed + 1, clustering_target=self.clustering_target)
             # this overwrites the network with a new one of different seed (as opposed to just jumping to save point)
         else:
             for key in self.init_state.keys():
@@ -510,6 +516,9 @@ class Net(object):
         self.graph.nodes[id]['state'] = state
 
     # misc
+
+    def clustering(self):
+        return nx.average_clustering(self.graph)
 
     def alter_clustering_coeff(self, target, epsilon):
         # to make less homogenous networks, this function redistributes edges until sufficiently close to goal
