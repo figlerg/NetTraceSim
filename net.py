@@ -546,7 +546,9 @@ class Net(object):
 
                         self.graph.remove_edge(b,c)
                         self.graph.add_edge(a,c)
-                        current_coeff = nx.average_clustering(self.graph)
+                        # current_coeff = nx.average_clustering(self.graph)
+                        if counter % 100 == 0: # 100 is just an idea
+                            current_coeff = nx.average_clustering(self.graph) # heuristic, do it in batches
                 else:
                     # b gets edge from a
                     c = np.random.choice(neighbors_a)
@@ -554,7 +556,9 @@ class Net(object):
                         # only move an edge when no edge between new partners exist AND at least 1 edge would be left
                         self.graph.remove_edge(a,c)
                         self.graph.add_edge(b,c)
-                        current_coeff = nx.average_clustering(self.graph)
+                        # current_coeff = nx.average_clustering(self.graph)
+                        if counter % 100 == 0: # 100 is just an idea
+                            current_coeff = nx.average_clustering(self.graph) # heuristic, do it in batches
 
             else:
                 # coeff is too high
@@ -565,7 +569,9 @@ class Net(object):
                         # only move an edge when no edge between new partners exist AND at least 1 edge would be left
                         self.graph.remove_edge(b,c)
                         self.graph.add_edge(a,c)
-                        current_coeff = nx.average_clustering(self.graph)
+                        # current_coeff = nx.average_clustering(self.graph)
+                        if counter % 100 == 0: # 100 is just an idea
+                            current_coeff = nx.average_clustering(self.graph) # heuristic, do it in batches
                 else:
                     # b gets edge from a
                     c = np.random.choice(neighbors_a)
@@ -573,11 +579,15 @@ class Net(object):
                         # only move an edge when no edge between new partners exist AND at least 1 edge would be left
                         self.graph.remove_edge(a,c)
                         self.graph.add_edge(b,c)
-                        current_coeff = nx.average_clustering(self.graph)
+                        # current_coeff = nx.average_clustering(self.graph)
+                        if counter % 100 == 0: # 100 is just an idea
+                            current_coeff = nx.average_clustering(self.graph) # heuristic, do it in batches
 
             counter += 1
         # print(counter)
         # print(nx.average_clustering(self.graph))
+
+        assert(counter != budget), "no success in changing clustering coefficient accordingly"
 
         return(current_coeff)
 

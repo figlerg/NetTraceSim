@@ -25,7 +25,7 @@ res = 20
 n = 200
 p = 0.1
 p_i = 0.5
-mc_iterations = 50
+mc_iterations = 20
 max_t = 200
 
 path = r'C:\Users\giglerf\Google Drive\Seminar_Networks\Experiments'
@@ -40,8 +40,13 @@ path = r'C:\Users\giglerf\Google Drive\Seminar_Networks\Experiments'
 # vary_p_i(res=res,n=n,p=p, mc_iterations=mc_iterations, max_t=max_t, force_recompute=False, mode='quarantine', path = path)
 # vary_p_i(res=res,n=n,p=p, mc_iterations=mc_iterations, max_t=max_t, force_recompute=False, mode='tracing', path = path)
 
-net1, counts1, t_peak1, peak_height1, equilib_flag1, durchseuchung1 = simple_experiment(n,p,p_i, mc_iterations, max_t, force_recompute=False, path=path)
-net2, counts2, t_peak2, peak_height2, equilib_flag2, durchseuchung2 = simple_experiment(n,p,p_i, mc_iterations, max_t,clustering=0.2, force_recompute=False, path=path)
+net1, counts1, t_peak1, peak_height1, equilib_flag1, durchseuchung1 = simple_experiment(n,p,p_i, mc_iterations, max_t, force_recompute=False, path=path, mode = 'tracing')
+net2, counts2, t_peak2, peak_height2, equilib_flag2, durchseuchung2 = simple_experiment(n,p,p_i, mc_iterations, max_t,clustering=0.3, force_recompute=False, path=path, mode = 'tracing')
+
+print(net1.clustering())
+print(net2.clustering())
+
+
 
 # net1.plot_timeseries(counts1)
 # net2.plot_timeseries(counts2)
