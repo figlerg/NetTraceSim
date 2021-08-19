@@ -270,7 +270,7 @@ class Net(object):
         contacts = self.graph.nodes[id]['contacts']
         for contact in contacts:
             t_t_random = np.random.exponential(scale=t_t, size=1)[0]
-            heapq.heappush(self.event_list, (time + t_t_random ,QUARANTINE, id))
+            heapq.heappush(self.event_list, (time + t_t_random ,QUARANTINE, contact))
         contacts.clear()
 
 
@@ -596,10 +596,13 @@ class Net(object):
 
 if __name__ == '__main__':
     p_i = 0.5
-    net = Net(n = 100, p_i=p_i, p = 0.1, seed = 123, max_t=100)
+    net = Net(n = 100, p_i=p_i, p = 0.3, seed = 123, max_t=100)
     # net.draw()
 
-    # net.sim(seed= 123, mode='quarantine')
+    test1 = net.sim(seed= 123, mode='quarantine')
+    test2 = net.sim(seed=123, mode = 'tracing')
+
+    print(np.all(test1 == test2))
 
     print(net.alter_clustering_coeff(0.09, 0.001))
 

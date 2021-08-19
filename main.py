@@ -6,7 +6,7 @@ from do_experiment import simple_experiment
 import networkx as nx
 import numpy as np
 import random
-
+import os
 
 # testing different network params
 
@@ -22,13 +22,16 @@ import random
 
 
 res = 20
-n = 200
-p = 0.1
-p_i = 0.5
+n = 20
+p = 0.5
+p_i = 0.9
 mc_iterations = 20
 max_t = 200
 
-path = r'C:\Users\giglerf\Google Drive\Seminar_Networks\Experiments'
+# path = r'C:\Users\giglerf\Google Drive\Seminar_Networks\Experiments'
+working_dir = os.getcwd()
+path = working_dir.join(['Experiments',])
+
 
 # from do_experiment import vary_p, vary_p_i
 # path = r'C:\Users\giglerf\Google Drive\Seminar_Networks\Experiments\vary_params'
@@ -43,12 +46,14 @@ path = r'C:\Users\giglerf\Google Drive\Seminar_Networks\Experiments'
 net1, counts1, t_peak1, peak_height1, equilib_flag1, durchseuchung1 = simple_experiment(n,p,p_i, mc_iterations, max_t, force_recompute=True, path=path, mode = 'tracing')
 # net2, counts2, t_peak2, peak_height2, equilib_flag2, durchseuchung2 = simple_experiment(n,p,p_i, mc_iterations, max_t,clustering=0.3, force_recompute=False, path=path, mode = 'tracing')
 
+net1.animate_last_sim()
+
 print(net1.clustering())
 # print(net2.clustering())
 
 
 
-# net1.plot_timeseries(counts1)
+net1.plot_timeseries(counts1)
 # net2.plot_timeseries(counts2)
 
 
