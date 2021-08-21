@@ -1,5 +1,4 @@
-# try to use whole network as class that runs in environment
-
+# network is a class that implements the full simulation environment
 import networkx as nx
 import matplotlib.pyplot as plt
 import matplotlib
@@ -16,66 +15,57 @@ from helpers import heap_delete
 
 class Net(object):
 
-    def __init__(self, n, p, p_i, max_t, seed, clustering_target = None):
+    def __init__(self, n, p, p_i, max_t, seed, clustering_target=None):
 
         # TODO try and decrease complexity, this seems convoluted
 
         print("Initializing network...")
         start = time.time()
-
         np.random.seed(seed)
-        # random.seed(seed)
 
-        self.n = n
-        self.p = p
-        self.p_i = p_i
-        self.clustering_target = clustering_target
+        self.p_i = p_i # infection prob at contact
+        self.max_t = max_t # sim time
 
-        # self.graph = nx.gnp_random_graph(n, p, seed = seed)
-        self.graph = nx.fast_gnp_random_graph(n, p, seed = seed)
+        self.n = n # nr of nodes
+        self.p = p # prob of connection between two nodes
+        self.graph = nx.fast_gnp_random_graph(n, p, seed=seed) # network structure
+        self.colormap = ['green' for i in range(n)] # for visualization in networks
+        self.clustering_target = clustering_target # the desired clustering coeff
+
+        self.event_list = [] # create event list as list and heapify for priority queue
+        heapq.heapify(self.event_list)
 
         if p == 0:
             print('Warning: p = 0, so the graph will not be checked for connectedness.')
-            self.graph = nx.fast_gnp_random_graph(n, p, seed = seed)
+            self.graph = nx.fast_gnp_random_graph(n, p, seed=seed)
             self.last_seed = seed
         else:
             while not nx.is_connected(self.graph):
                 # I only want connected graphs, otherwise i cannot really compare
                 seed += 1
-                self.graph = nx.fast_gnp_random_graph(n, p, seed = seed)
-            # print(seed)
+                self.graph = nx.fast_gnp_random_graph(n, p, seed=seed)
             else:
-                self.last_seed = seed # this is the seed that was used.
+                self.last_seed = seed  # this is the seed that was used.
                 # I save this so I can choose a different one when I want to create a new net in mc
 
         if self.clustering_target:
-            self.alter_clustering_coeff(clustering_target,clustering_epsilon)
+            self.alter_clustering_coeff(clustering_target, clustering_epsilon)
 
-        self.colormap = ['green' for i in range(n)]
-
-        self.event_list = []
-        heapq.heapify(self.event_list)
-
-        self.max_t = max_t
-
-        # I dont want to deal with a whole mutable state list, so I only save the current count at regular intervals:
-        self.count = np.zeros([5,1], dtype=np.int32).flatten() # current state
+        # I don't want to deal with a whole mutable state list, so I only save the current count at regular intervals:
+        self.count = np.zeros([5, 1], dtype=np.int32).flatten()  # current state
         # susceptible, exposed, infectious, recovered, transmission_disabled are the 5 rows
 
         self.count[0] = n
         # TODO delete last row, this count is deprecated
-        self.counts = np.zeros([5, math.floor(max_t/resolution)], dtype=np.int32) # history, gets written in sim()
+        self.counts = np.zeros([5, math.floor(max_t / resolution)], dtype=np.int32)  # history, gets written in sim()
 
-
-
-        self.net_states = [] # this is a list of nets at equidistant time steps
+        self.net_states = []  # this is a list of nets at equidistant time steps
         # i use this for the animation
 
         # for comparison, even new network structures use same layout (this only writes self.pos once, at start)
-        try:
-            a = self.pos # TODO this and the hard option of reset() is rather quick & dirty
-        except AttributeError:
+        if not hasattr(self, 'pos'):
             self.pos = nx.spring_layout(self.graph, seed=seed)
+
 
         for id in range(n):
             # at first all are susceptible
@@ -83,8 +73,8 @@ class Net(object):
             # print(net.edges)
             self.graph.nodes[id]['state'] = 0
 
-        nx.set_edge_attributes(self.graph, False, name = 'blocked')
-        nx.set_node_attributes(self.graph, [], name = 'contacts')
+        nx.set_edge_attributes(self.graph, False, name='blocked')
+        nx.set_node_attributes(self.graph, [], name='contacts')
 
         # TODO this is a little rough...
         #  essentially I want to set a reset point because some of the values are changed in place and I need a fresh
@@ -102,6 +92,7 @@ class Net(object):
         print("Network initialized. Time elapsed: {}s.".format(end - start))
 
         # self.draw()
+
     # events:
 
     def infection(self, time, id):
@@ -121,27 +112,24 @@ class Net(object):
 
     def infectious(self, time, id, mode):
         # print('Person #{} started being infectious at time {}'.format(id, time))
-        self.update_state(id,2)
+        self.update_state(id, 2)
         self.count += exp2inf
         self.colormap[id] = 'red'
 
         t_c_random = np.random.exponential(scale=t_c, size=1)[0]
         t_r_random = np.random.exponential(scale=t_r, size=1)[0]
 
-
-
-        heapq.heappush(self.event_list, (time + t_c_random,CONTACT, id))
-        heapq.heappush(self.event_list, (time + t_r_random ,RECOVER, id))
+        heapq.heappush(self.event_list, (time + t_c_random, CONTACT, id))
+        heapq.heappush(self.event_list, (time + t_r_random, RECOVER, id))
 
         if mode == 'quarantine' or mode == 'tracing':
-            t_q_random = np.random.exponential(scale=t_q, size=1)[0]
-            heapq.heappush(self.event_list, (time + t_q_random ,QUARANTINE, id))
+            t_q_random = np.random.exponential(scale=t_d, size=1)[0]
+            heapq.heappush(self.event_list, (time + t_q_random, QUARANTINE, id))
 
-
-        if mode == 'tracing':
-            heapq.heappush(self.event_list, (time + t_q_random ,TRACING, id))
-            # I will simply do these two at the same time (when the infection is detected)
-            # the tracing event adds a little bit of time for the process of finding and alerting contacts
+            if mode == 'tracing':
+                heapq.heappush(self.event_list, (time + t_q_random, TRACING, id))
+                # I will simply do these two at the same time (when the infection is detected)
+                # the tracing event adds a little bit of time for the process of finding and alerting contacts
 
     def contact(self, time, id):
 
@@ -149,18 +137,16 @@ class Net(object):
         # connections = list(self.graph.edges)
         friends = list((friend for friend in self.graph.neighbors(id)
                         if self.graph.edges[id, friend]['blocked'] == False))
-                # can only use edges that aren't blocked due to quarantine
-
-
+        # can only use edges that aren't blocked due to quarantine
 
         if friends:
             # contacted_friend = random.choice(friends)
-            contacted_friend_idx = np.random.choice(len(friends),1)[0]
+            contacted_friend_idx = np.random.choice(len(friends), 1)[0]
             contacted_friend = friends[contacted_friend_idx]
             self.graph.nodes[id]['contacts'].append(contacted_friend)
         else:
             t_c_random = np.random.exponential(scale=t_c, size=1)[0]
-            next_contact = (time+t_c_random, CONTACT, id)
+            next_contact = (time + t_c_random, CONTACT, id)
             heapq.heappush(self.event_list, next_contact)
             return
 
@@ -178,14 +164,11 @@ class Net(object):
         else:
             pass  # if in any other state than susceptible, this contact does not matter
 
-
-
-
         if self.graph.nodes[id]['state'] == 2:
 
             t_c_random = np.random.exponential(scale=t_c, size=1)[0]
 
-            next_contact = (time+t_c_random, CONTACT, id)
+            next_contact = (time + t_c_random, CONTACT, id)
             # if person is not infectious anymore, no need to schedule this
             heapq.heappush(self.event_list, next_contact)
         else:
@@ -203,28 +186,10 @@ class Net(object):
                 self.cancel_event(id, CONTACT, all=False)
         except KeyError:
             pass
-        # try:
-        #     if self.graph.nodes[id]['latest_contact']:
-        #         copy = self.event_list.copy()
-        #
-        #         # TODO this could be faster, i can use heap structure to stop earlier right?
-        #         fitting_events = []
-        #         for i, event in enumerate(copy):
-        #             if event[0] == 2 and event[2] == id:
-        #                 fitting_events.append((event[0], i))
-        #                 # with time and index i have all information needed to cancel
-        #                 # NEXT scheduled event with this id and type
-        #         cancel_prioritized = sorted(fitting_events, key= lambda x: x[0]) # sort for time
-        #         try:
-        #             i = cancel_prioritized[0][1] # gets index of original heap
-        #             heap_delete(self.event_list, i)
-        #         except IndexError: # no scheduled event that fits
-        #             pass
-        # except:
-        #     pass
 
         if self.graph.nodes[id]['state'] == NO_TRANS_STATE:
             self.count += no_trans2rec
+            # pass
         else:
             self.count += inf2rec
 
@@ -236,10 +201,9 @@ class Net(object):
 
     def quarantine(self, time, id):
 
-
-        connections = list(((id,friend) for friend in self.graph.neighbors(id)))
-        for id,friend in connections:
-            self.graph.edges[id,friend]['blocked'] = True
+        connections = list(((id, friend) for friend in self.graph.neighbors(id)))
+        for id, friend in connections:
+            self.graph.edges[id, friend]['blocked'] = True
 
         # in my simple model it would be possible for someone to be already recovered when the quarantine event happens
         # in this case, the color won't change to blue (because no contact event will ever happen anyways)
@@ -250,19 +214,24 @@ class Net(object):
             # self.count += inf2no_trans
             self.colormap[id] = 'blue'
 
-
-        heapq.heappush(self.event_list, (time + quarantine_time,END_OF_QUARANTINE, id))
+        heapq.heappush(self.event_list, (time + quarantine_time, END_OF_QUARANTINE, id))
 
     def end_of_quarantine(self, time, id):
-        connections = list(((id,friend) for friend in self.graph.neighbors(id)))
-        for id,friend in connections:
+        connections = list(((id, friend) for friend in self.graph.neighbors(id)))
+        for id, friend in connections:
             if self.colormap[friend] != 'blue':
+                # TODO this is problematic, since I suddenly use the color scheme as an alternative for
+                #  the no_transmission state
+
                 # this should keep connections blocked if the other side is in quarantine
-                self.graph.edges[id,friend]['blocked'] = False
-            # TODO this (no if clause)
-            #  leaves a weird possibility: if person a and b both are quarantined,
+                self.graph.edges[id, friend]['blocked'] = False
+
+            #  One would think the last if clause is not necessary...
+            #  But otherwise it leaves a weird possibility: if person a and b both are quarantined,
             #  the first one (say a) going out of quarantine would also re-enable the connection between
-            #  the two, even if b is still quarantined. Should not change much, though.
+            #  the two, even if b is still quarantined.
+            #  Should not change much, though.
+
             #  OK THIS DEFINITELY MATTERS. leaving the if clause out means more people get infected than
             #  without tracing...
 
@@ -270,13 +239,13 @@ class Net(object):
         contacts = self.graph.nodes[id]['contacts']
         for contact in contacts:
             t_t_random = np.random.exponential(scale=t_t, size=1)[0]
-            heapq.heappush(self.event_list, (time + t_t_random ,QUARANTINE, contact))
+            heapq.heappush(self.event_list, (time + t_t_random, QUARANTINE, contact))
         contacts.clear()
 
 
     # simulation
 
-    def sim(self, seed, mode = None):
+    def sim(self, seed, mode=None):
         # call first infection event
 
         np.random.seed(seed)
@@ -305,7 +274,7 @@ class Net(object):
             # if it exceeds the current sampling point, the current counts are saved before doing the event (hold)
             if current_t >= counter * resolution:
                 assert (
-                                   self.count >= 0).all() and self.count.sum() == self.n, 'Something went wrong, impossible states detected.'
+                               self.count >= 0).all() and self.count.sum() == self.n, 'Something went wrong, impossible states detected.'
 
                 self.counts[:, counter] = self.count
                 self.net_states.append((0, self.colormap.copy()))
@@ -346,7 +315,7 @@ class Net(object):
         elif type == QUARANTINE:
             self.quarantine(time, id)
         elif type == END_OF_QUARANTINE:
-            self.end_of_quarantine(time,id)
+            self.end_of_quarantine(time, id)
         elif type == TRACING:
             self.tracing(time, id)
         else:
@@ -396,17 +365,16 @@ class Net(object):
             except IndexError:  # no scheduled event that fits
                 pass
 
-    def monte_carlo(self, n, mode = None):
+    def monte_carlo(self, n, mode=None):
         # net is input
         # run sim n times, saving the output in list
         results: List[np.ndarray] = []
         for i in range(n):
-            redo = not bool((i + 1)%redo_net) # redo_net is in globals.py, every i iterations net is changed as well
-            self.reset(hard = redo)
+            redo = not bool((i + 1) % redo_net)  # redo_net is in globals.py, every i iterations net is changed as well
+            self.reset(hard=redo)
             if redo:
                 print(self.clustering())
-            results.append(self.sim(seed=i, mode = mode).copy())
-
+            results.append(self.sim(seed=i, mode=mode).copy())
 
         # compute mean
         mean = np.zeros(results[0].shape)
@@ -416,11 +384,12 @@ class Net(object):
 
         return mean
 
-    def reset(self, hard = False):
+    def reset(self, hard=False):
         # see note in __init__. Short: reset to original state (deepcopy), OR redo whole network
-        # TODO unsafe?
+        # TODO unsafe? hard option of reset() might be rather quick & dirty
         if hard:
-            self.__init__(self.n, self.p, self.p_i, self.max_t, self.last_seed + 1, clustering_target=self.clustering_target)
+            self.__init__(self.n, self.p, self.p_i, self.max_t, self.last_seed + 1,
+                          clustering_target=self.clustering_target)
             # this overwrites the network with a new one of different seed (as opposed to just jumping to save point)
         else:
             for key in self.init_state.keys():
@@ -431,10 +400,9 @@ class Net(object):
                         # print(key)
                         self.__dict__[key] = self.init_state[key]
 
-
     # visuals
 
-    def plot_timeseries(self, counts=None, save = None):
+    def plot_timeseries(self, counts=None, save=None, discrete_plots = False):
         print('Plotting time series...')
 
         plt.clf()
@@ -447,20 +415,23 @@ class Net(object):
         # x = np.linspace(0, 10, num=11, endpoint=True)
         x = ts
 
-        # by default, i use the classes last simulation results.
+        # by default, i use the class's last simulation results.
         # but for monte carlo i want to be able to plot something manually as well
         if isinstance(counts, np.ndarray):
             y = counts.T
         else:
             y = self.counts.T  # in case counts is not given, take the ones saved from last simulation
 
-        # f1 = interp1d(x, y, kind='nearest')
-        f2 = interp1d(x, y, kind='previous', axis=0)
-        # f3 = interp1d(x, y, kind='next')
-        xnew = np.linspace(0, self.max_t - resolution, num=10001, endpoint=False)
-        # plt.plot(x, y, 'o')
-        plt.plot(xnew, f2(xnew))
-        # plt.legend(['data', 'nearest', 'previous', 'next'], loc='best')
+
+        if discrete_plots:
+            f = interp1d(x, y, kind='zero', axis=0)
+            xnew = np.linspace(0, self.max_t - resolution, num=10001, endpoint=False)
+
+            plt.plot(xnew, f(xnew))
+
+        else:
+            plt.plot(x,y)
+
         if save:
             plt.savefig(save)
         else:
@@ -472,7 +443,7 @@ class Net(object):
     def draw(self):
         pos = self.pos
         # i deliberately leave the seed fixed, maybe I want same positions for networks of equal size
-        nx.draw(self.graph, node_color = self.colormap, pos = pos)
+        nx.draw(self.graph, node_color=self.colormap, pos=pos)
 
         plt.show()
 
@@ -529,11 +500,10 @@ class Net(object):
         counter = 0
 
         while abs(current_coeff - target) > epsilon and counter < budget:
-            a,b = np.random.randint(0, high=self.n, size=2, dtype=int)
+            a, b = np.random.randint(0, high=self.n, size=2, dtype=int)
 
             neighbors_a = list(self.graph.neighbors(a))
             neighbors_b = list(self.graph.neighbors(b))
-
 
             if target > current_coeff:
                 # currently coeff is too low
@@ -544,73 +514,66 @@ class Net(object):
                     if (not c in neighbors_a) and len(neighbors_b) != 1:
                         # only move an edge when no edge between new partners exist AND at least 1 edge would be left
 
-                        self.graph.remove_edge(b,c)
-                        self.graph.add_edge(a,c)
+                        self.graph.remove_edge(b, c)
+                        self.graph.add_edge(a, c)
                         # current_coeff = nx.average_clustering(self.graph)
-                        if counter % 100 == 0: # 100 is just an idea
-                            current_coeff = nx.average_clustering(self.graph) # heuristic, do it in batches
+                        if counter % 100 == 0:  # 100 is just an idea
+                            current_coeff = nx.average_clustering(self.graph)  # heuristic, do it in batches
                 else:
                     # b gets edge from a
                     c = np.random.choice(neighbors_a)
                     if (not c in neighbors_b) and len(neighbors_a) != 1:
                         # only move an edge when no edge between new partners exist AND at least 1 edge would be left
-                        self.graph.remove_edge(a,c)
-                        self.graph.add_edge(b,c)
+                        self.graph.remove_edge(a, c)
+                        self.graph.add_edge(b, c)
                         # current_coeff = nx.average_clustering(self.graph)
-                        if counter % 100 == 0: # 100 is just an idea
-                            current_coeff = nx.average_clustering(self.graph) # heuristic, do it in batches
+                        if counter % 100 == 0:  # 100 is just an idea
+                            current_coeff = nx.average_clustering(self.graph)  # heuristic, do it in batches
 
             else:
                 # coeff is too high
-                if len(neighbors_b) > len(neighbors_a): # This is the only different line, everything is flipped
+                if len(neighbors_b) > len(neighbors_a):  # This is the only different line, everything is flipped
                     # a gets edge from b to increase coeff
                     c = np.random.choice(neighbors_b)
                     if (not c in neighbors_a) and len(neighbors_b) != 1:
                         # only move an edge when no edge between new partners exist AND at least 1 edge would be left
-                        self.graph.remove_edge(b,c)
-                        self.graph.add_edge(a,c)
+                        self.graph.remove_edge(b, c)
+                        self.graph.add_edge(a, c)
                         # current_coeff = nx.average_clustering(self.graph)
-                        if counter % 100 == 0: # 100 is just an idea
-                            current_coeff = nx.average_clustering(self.graph) # heuristic, do it in batches
+                        if counter % 100 == 0:  # 100 is just an idea
+                            current_coeff = nx.average_clustering(self.graph)  # heuristic, do it in batches
                 else:
                     # b gets edge from a
                     c = np.random.choice(neighbors_a)
                     if (not c in neighbors_b) and len(neighbors_a) != 1:
                         # only move an edge when no edge between new partners exist AND at least 1 edge would be left
-                        self.graph.remove_edge(a,c)
-                        self.graph.add_edge(b,c)
+                        self.graph.remove_edge(a, c)
+                        self.graph.add_edge(b, c)
                         # current_coeff = nx.average_clustering(self.graph)
-                        if counter % 100 == 0: # 100 is just an idea
-                            current_coeff = nx.average_clustering(self.graph) # heuristic, do it in batches
+                        if counter % 100 == 0:  # 100 is just an idea
+                            current_coeff = nx.average_clustering(self.graph)  # heuristic, do it in batches
 
             counter += 1
         # print(counter)
         # print(nx.average_clustering(self.graph))
 
-        assert(counter != budget), "no success in changing clustering coefficient accordingly"
+        assert (counter != budget), "no success in changing clustering coefficient accordingly"
 
-        return(current_coeff)
-
-
+        return (current_coeff)
 
 
 if __name__ == '__main__':
-    p_i = 0.5
-    net = Net(n = 100, p_i=p_i, p = 0.3, seed = 123, max_t=100)
+    p_i = 0.9
+    net = Net(n=100, p_i=p_i, p=0.3, seed=123, max_t=100)
     # net.draw()
 
-    test1 = net.sim(seed= 123, mode='quarantine')
-    test2 = net.sim(seed=123, mode = 'tracing')
+    test1 = net.sim(seed=123, mode='quarantine')
+    # test2 = net.sim(seed=123, mode='tracing')
 
-    print(np.all(test1 == test2))
+    net.plot_timeseries()
 
-    print(net.alter_clustering_coeff(0.09, 0.001))
+    # print(np.all(test1 == test2))
 
-
-
-
+    # print(net.alter_clustering_coeff(0.09, 0.001))
 
     # net.animate_last_sim()
-
-
-

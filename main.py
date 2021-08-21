@@ -24,11 +24,10 @@ import os
 res = 20
 n = 20
 p = 0.5
-p_i = 0.9
-mc_iterations = 20
+p_i = 0.5
+mc_iterations = 40
 max_t = 200
 
-# path = r'C:\Users\giglerf\Google Drive\Seminar_Networks\Experiments'
 working_dir = os.getcwd()
 path = working_dir.join(['Experiments',])
 
@@ -46,9 +45,9 @@ path = working_dir.join(['Experiments',])
 net1, counts1, t_peak1, peak_height1, equilib_flag1, durchseuchung1 = simple_experiment(n,p,p_i, mc_iterations, max_t, force_recompute=True, path=path, mode = 'tracing')
 # net2, counts2, t_peak2, peak_height2, equilib_flag2, durchseuchung2 = simple_experiment(n,p,p_i, mc_iterations, max_t,clustering=0.3, force_recompute=False, path=path, mode = 'tracing')
 
-net1.animate_last_sim()
+# net1.animate_last_sim()
 
-print(net1.clustering())
+# print(net1.clustering())
 # print(net2.clustering())
 
 

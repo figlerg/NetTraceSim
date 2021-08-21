@@ -180,7 +180,7 @@ if __name__ == '__main__':
     p_i = 0.5
     mc_iterations = 50
     max_t = 200
-    path = path = r'C:\Users\giglerf\Google Drive\Seminar_Networks\Experiments\vary_params'
+    path = r'C:\Users\giglerf\Google Drive\Seminar_Networks\Experiments\vary_params'
 
 
     vary_p(res=res,n=n,p_i=p_i, mc_iterations=mc_iterations, max_t=max_t, force_recompute=False, path = path)
