@@ -52,12 +52,12 @@ class Net(object):
             self.alter_clustering_coeff(clustering_target, clustering_epsilon)
 
         # I don't want to deal with a whole mutable state list, so I only save the current count at regular intervals:
-        self.count = np.zeros([5, 1], dtype=np.int32).flatten()  # current state
-        # susceptible, exposed, infectious, recovered, transmission_disabled are the 5 rows
+        self.count = np.zeros([4, 1], dtype=np.int32).flatten()  # current state
+        # susceptible, exposed, infectious, recovered are the 4 rows
 
         self.count[0] = n
         # TODO delete last row, this count is deprecated
-        self.counts = np.zeros([5, math.floor(max_t / resolution)], dtype=np.int32)  # history, gets written in sim()
+        self.counts = np.zeros([4, math.floor(max_t / resolution)], dtype=np.int32)  # history, gets written in sim()
 
         self.net_states = []  # this is a list of nets at equidistant time steps
         # i use this for the animation
@@ -97,7 +97,7 @@ class Net(object):
 
     def infection(self, time, id):
 
-        self.update_state(id, 1)  # exposed now
+        self.update_state(id, EXP_STATE)  # exposed now
         self.count += susc2exp
         self.colormap[id] = 'yellow'
         # print('Person #{} has been exposed at time {}'.format(id, time))
@@ -112,7 +112,7 @@ class Net(object):
 
     def infectious(self, time, id, mode):
         # print('Person #{} started being infectious at time {}'.format(id, time))
-        self.update_state(id, 2)
+        self.update_state(id, INF_STATE)
         self.count += exp2inf
         self.colormap[id] = 'red'
 
@@ -150,10 +150,7 @@ class Net(object):
             heapq.heappush(self.event_list, next_contact)
             return
 
-        # if self.graph.nodes[id]['state'] == 3:
-        #     yield
-
-        if self.graph.nodes[contacted_friend]['state'] == 0:
+        if self.graph.nodes[contacted_friend]['state'] == SUSC_STATE:
 
             # print('#' + str(id) + ' has had contact with #{}.'.format(contacted_friend))
             # u = random.uniform(0,1)
@@ -164,7 +161,7 @@ class Net(object):
         else:
             pass  # if in any other state than susceptible, this contact does not matter
 
-        if self.graph.nodes[id]['state'] == 2:
+        if self.graph.nodes[id]['state'] == INF_STATE:
 
             t_c_random = np.random.exponential(scale=t_c, size=1)[0]
 
@@ -187,13 +184,9 @@ class Net(object):
         except KeyError:
             pass
 
-        if self.graph.nodes[id]['state'] == NO_TRANS_STATE:
-            self.count += no_trans2rec
-            # pass
-        else:
-            self.count += inf2rec
+        self.count += inf2rec
 
-        self.update_state(id, 3)  # individuum is saved as recovered
+        self.update_state(id, REC_STATE)  # individuum is saved as recovered
         self.colormap[id] = 'grey'
         # print(str(id)+' has recovered.')
 
@@ -205,24 +198,30 @@ class Net(object):
         for id, friend in connections:
             self.graph.edges[id, friend]['blocked'] = True
 
+        # need to remember the old state
+        self.graph.nodes[id]['shadowed_state'] = self.graph.nodes[id]['state']
+
         # in my simple model it would be possible for someone to be already recovered when the quarantine event happens
         # in this case, the color won't change to blue (because no contact event will ever happen anyways)
         if self.graph.nodes[id]['state'] == REC_STATE:
             pass
         else:
-            # self.update_state(id, NO_TRANS_STATE)  # update state to transmission disabled
-            # self.count += inf2no_trans
+            self.update_state(id, NO_TRANS_STATE)  # update state to transmission disabled
             self.colormap[id] = 'blue'
 
         heapq.heappush(self.event_list, (time + quarantine_time, END_OF_QUARANTINE, id))
 
     def end_of_quarantine(self, time, id):
+
+        # if quarantine is over and no state change has happened, it simply gets old one
+        if self.graph.nodes[id]['state'] == NO_TRANS_STATE:
+            self.update_state(id, self.graph.nodes[id]['shadowed_state'])
+
+
         connections = list(((id, friend) for friend in self.graph.neighbors(id)))
         for id, friend in connections:
-            if self.colormap[friend] != 'blue':
-                # TODO this is problematic, since I suddenly use the color scheme as an alternative for
-                #  the no_transmission state
-
+            if self.graph.nodes[friend]['state'] != NO_TRANS_STATE:
+            # if self.colormap[friend] != 'blue':
                 # this should keep connections blocked if the other side is in quarantine
                 self.graph.edges[id, friend]['blocked'] = False
 
@@ -234,6 +233,7 @@ class Net(object):
 
             #  OK THIS DEFINITELY MATTERS. leaving the if clause out means more people get infected than
             #  without tracing...
+
 
     def tracing(self, time, id):
         contacts = self.graph.nodes[id]['contacts']
@@ -296,7 +296,6 @@ class Net(object):
     def do_event(self, event, mode):
         time = event[0]
         type = event[1]  # REARRANGED as (time, type, id) because heapq sorts only for first...
-        # TODO check whether i changed it everywhere...
         id = event[2]
         # events:
         # 0:infection
@@ -422,6 +421,8 @@ class Net(object):
         else:
             y = self.counts.T  # in case counts is not given, take the ones saved from last simulation
 
+        ax = plt.gca()
+        ax.set_prop_cycle(color=['green', 'yellow','red','grey'])
 
         if discrete_plots:
             f = interp1d(x, y, kind='zero', axis=0)
@@ -432,10 +433,15 @@ class Net(object):
         else:
             plt.plot(x,y)
 
+        plt.legend(['susceptible', 'exposed', 'infected', 'recovered'])
+
+
         if save:
             plt.savefig(save)
         else:
             plt.show()
+
+
 
         # plt.plot(ts, self.counts.T)
         # plt.show()
@@ -447,7 +453,7 @@ class Net(object):
 
         plt.show()
 
-    def animate_last_sim(self):
+    def animate_last_sim(self, dest = None):
         print("Generating animation...")
         start = time.time()
 
@@ -474,8 +480,10 @@ class Net(object):
             # nx.draw(graph, node_color = colormap, pos = pos)
 
         anim = animation.FuncAnimation(fig, animate, frames=len(self.net_states), interval=1000, blit=False)
-
-        anim.save('test.mp4')
+        if not dest:
+            anim.save('test.mp4')
+        else:
+            anim.save(dest)
         plt.close(fig)
 
         end = time.time()

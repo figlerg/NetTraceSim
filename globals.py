@@ -38,9 +38,9 @@ REC_STATE = 3
 NO_TRANS_STATE = 4
 
 # update the counts in the events by adding these to self.count:
-susc2exp = np.asarray([-1, 1, 0, 0, 0], dtype=np.int32)
-exp2inf = np.asarray([0, -1, 1, 0, 0], dtype=np.int32)
-inf2rec = np.asarray([0, 0, -1, 1, 0], dtype=np.int32)
-inf2no_trans = np.asarray([0, 0, -1, 0, 1], dtype=np.int32)
-no_trans2rec = np.asarray([0, 0, 0, 1, -1], dtype=np.int32)
-no_trans2inf = np.asarray([0, 0, 1, 0, -1], dtype=np.int32)
+susc2exp = np.asarray([-1, 1, 0, 0], dtype=np.int32)
+exp2inf = np.asarray([0, -1, 1, 0], dtype=np.int32)
+inf2rec = np.asarray([0, 0, -1, 1], dtype=np.int32)
+inf2no_trans = np.asarray([0, 0, -1, 0], dtype=np.int32)
+# no_trans2rec = np.asarray([0, 0, 0, 1, -1], dtype=np.int32)
+# no_trans2inf = np.asarray([0, 0, 1, 0, -1], dtype=np.int32)
