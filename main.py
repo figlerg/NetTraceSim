@@ -50,16 +50,8 @@ net1, counts1, t_peak1, peak_height1, equilib_flag1, durchseuchung1 = simple_exp
 # print(net1.clustering())
 # print(net2.clustering())
 
-# net1.plot_timeseries(counts1)
+net1.plot_timeseries(counts1)
 # net2.plot_timeseries(counts2)
-
-# some tests for refactoring:
-dirname_parent = os.path.dirname(__file__)
-dirname = os.path.join(dirname_parent, 'Testcases_refactoring')
-with open(os.path.join(dirname,'newtest'),'wb') as f:
-    pickle.dump((net1, counts1, t_peak1, peak_height1, equilib_flag1, durchseuchung1), f)
-
-
 
 
 

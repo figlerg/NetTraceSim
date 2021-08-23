@@ -17,22 +17,22 @@ class Net(object):
 
     def __init__(self, n, p, p_i, max_t, seed, clustering_target=None):
 
-        # TODO try and decrease complexity, this seems convoluted
+        # TODO try to decrease complexity, this seems convoluted
 
         print("Initializing network...")
         start = time.time()
         np.random.seed(seed)
 
-        self.p_i = p_i # infection prob at contact
-        self.max_t = max_t # sim time
+        self.p_i = p_i  # infection prob at contact
+        self.max_t = max_t  # sim time
 
-        self.n = n # nr of nodes
-        self.p = p # prob of connection between two nodes
-        self.graph = nx.fast_gnp_random_graph(n, p, seed=seed) # network structure
-        self.colormap = ['green' for i in range(n)] # for visualization in networks
-        self.clustering_target = clustering_target # the desired clustering coeff
+        self.n = n  # nr of nodes
+        self.p = p  # prob of connection between two nodes
+        self.graph = nx.fast_gnp_random_graph(n, p, seed=seed)  # network structure
+        self.colormap = ['green' for i in range(n)]  # for visualization in networks
+        self.clustering_target = clustering_target  # the desired clustering coeff
 
-        self.event_list = [] # create event list as list and heapify for priority queue
+        self.event_list = []  # create event list as list and heapify for priority queue
         heapq.heapify(self.event_list)
 
         if p == 0:
@@ -55,43 +55,36 @@ class Net(object):
         self.count = np.zeros([4, 1], dtype=np.int32).flatten()  # current state
         # susceptible, exposed, infectious, recovered are the 4 rows
 
+        # history, gets written in sim()
         self.count[0] = n
-        # TODO delete last row, this count is deprecated
-        self.counts = np.zeros([4, math.floor(max_t / resolution)], dtype=np.int32)  # history, gets written in sim()
+        self.counts = np.zeros([4, math.floor(max_t / resolution)], dtype=np.int32)
 
         self.net_states = []  # this is a list of nets at equidistant time steps
-        # i use this for the animation
+        # i use this for the animation frames
 
         # for comparison, even new network structures use same layout (this only writes self.pos once, at start)
         if not hasattr(self, 'pos'):
             self.pos = nx.spring_layout(self.graph, seed=seed)
 
-
         for id in range(n):
-            # at first all are susceptible
-            # print(net.nodes)
-            # print(net.edges)
+            # at first all agents are susceptible
             self.graph.nodes[id]['state'] = 0
 
         nx.set_edge_attributes(self.graph, False, name='blocked')
         nx.set_node_attributes(self.graph, [], name='contacts')
 
-        # TODO this is a little rough...
-        #  essentially I want to set a reset point because some of the values are changed in place and I need a fresh
-        #  start for each monte carlo. Resetting is done via the self.reset() function
+        # Here I set a reset point because some of the values are changed in place and I need a fresh
+        # start for each monte carlo. Resetting is done via the self.reset() function
         self.init_state = {}
         for key in self.__dict__.keys():
             try:
                 self.init_state[key] = self.__dict__[key].copy()
             except AttributeError:
-                # print(key)
                 self.init_state[key] = self.__dict__[key]
 
         end = time.time()
 
         print("Network initialized. Time elapsed: {}s.".format(end - start))
-
-        # self.draw()
 
     # events:
 
@@ -140,7 +133,6 @@ class Net(object):
         # can only use edges that aren't blocked due to quarantine
 
         if friends:
-            # contacted_friend = random.choice(friends)
             contacted_friend_idx = np.random.choice(len(friends), 1)[0]
             contacted_friend = friends[contacted_friend_idx]
             self.graph.nodes[id]['contacts'].append(contacted_friend)
@@ -153,7 +145,6 @@ class Net(object):
         if self.graph.nodes[contacted_friend]['state'] == SUSC_STATE:
 
             # print('#' + str(id) + ' has had contact with #{}.'.format(contacted_friend))
-            # u = random.uniform(0,1)
             u = np.random.uniform()
 
             if u < self.p_i:
@@ -164,8 +155,8 @@ class Net(object):
         if self.graph.nodes[id]['state'] == INF_STATE:
 
             t_c_random = np.random.exponential(scale=t_c, size=1)[0]
-
             next_contact = (time + t_c_random, CONTACT, id)
+
             # if person is not infectious anymore, no need to schedule this
             heapq.heappush(self.event_list, next_contact)
         else:
@@ -189,7 +180,6 @@ class Net(object):
         self.update_state(id, REC_STATE)  # individuum is saved as recovered
         self.colormap[id] = 'grey'
         # print(str(id)+' has recovered.')
-
         # print('Contact process stopped due to recovery.')
 
     def quarantine(self, time, id):
@@ -217,11 +207,10 @@ class Net(object):
         if self.graph.nodes[id]['state'] == NO_TRANS_STATE:
             self.update_state(id, self.graph.nodes[id]['shadowed_state'])
 
-
         connections = list(((id, friend) for friend in self.graph.neighbors(id)))
         for id, friend in connections:
             if self.graph.nodes[friend]['state'] != NO_TRANS_STATE:
-            # if self.colormap[friend] != 'blue':
+                # if self.colormap[friend] != 'blue':
                 # this should keep connections blocked if the other side is in quarantine
                 self.graph.edges[id, friend]['blocked'] = False
 
@@ -229,11 +218,6 @@ class Net(object):
             #  But otherwise it leaves a weird possibility: if person a and b both are quarantined,
             #  the first one (say a) going out of quarantine would also re-enable the connection between
             #  the two, even if b is still quarantined.
-            #  Should not change much, though.
-
-            #  OK THIS DEFINITELY MATTERS. leaving the if clause out means more people get infected than
-            #  without tracing...
-
 
     def tracing(self, time, id):
         contacts = self.graph.nodes[id]['contacts']
@@ -242,25 +226,19 @@ class Net(object):
             heapq.heappush(self.event_list, (time + t_t_random, QUARANTINE, contact))
         contacts.clear()
 
-
     # simulation
 
     def sim(self, seed, mode=None):
         # call first infection event
 
-        np.random.seed(seed)
-
         start = time.time()
-
+        np.random.seed(seed)
         print('Simulation started.')
 
         event = (0, INFECTION, 0)  # ind. #0 is infected at t = 0
         heapq.heappush(self.event_list, event)
 
-        # intervals = 1 # days for each animation frame
         counter = 0
-
-        # end_of_sim = -1
 
         while self.event_list:
 
@@ -273,8 +251,8 @@ class Net(object):
 
             # if it exceeds the current sampling point, the current counts are saved before doing the event (hold)
             if current_t >= counter * resolution:
-                assert (
-                               self.count >= 0).all() and self.count.sum() == self.n, 'Something went wrong, impossible states detected.'
+                assert (self.count >= 0).all() and self.count.sum() == self.n, \
+                    'Something went wrong, impossible states detected.'
 
                 self.counts[:, counter] = self.count
                 self.net_states.append((0, self.colormap.copy()))
@@ -282,26 +260,27 @@ class Net(object):
 
             self.do_event(event, mode)
 
-        end_of_sim = current_t  # this is where the simulation stopped. After that, states remain constant
         for i in np.arange(start=counter, stop=self.counts.shape[1], dtype=int):
             self.counts[:, i] = self.counts[:, i - 1]  # otherwise it is all 0 at some point
 
         end = time.time()
-
         print('Simulation complete. Simulation time : {}s.'.format(end - start))
 
-        # self.plot_timeseries()
         return self.counts
 
     def do_event(self, event, mode):
+        # events are saved as tuples (time, type, id)
         time = event[0]
-        type = event[1]  # REARRANGED as (time, type, id) because heapq sorts only for first...
+        type = event[1]
         id = event[2]
         # events:
         # 0:infection
         # 1:infectious
         # 2:contact
         # 3:recovery
+        # 4:QUARANTINE
+        # 5:END_OF_QUARANTINE
+        # 6:TRACING
 
         if type == 0:
             self.infection(time, id)
@@ -322,8 +301,8 @@ class Net(object):
 
     def cancel_event(self, id, event_id, all=False):
         # the "all" parameter is here because for now I assume that all infection events must be canceled once
-        #  the infection has commenced TODO review
-        #  (so for an infected individual no other infection events shall occur
+        #  the infection is completed.
+        #  (so for an infected individual no duplicate infection events occur)
         copy = self.event_list.copy()
 
         fitting_events = []
@@ -336,7 +315,6 @@ class Net(object):
         if all:  # want to delete all events of that type for that individual
             indices = [i for bin, i in fitting_events]  # i want these gone
             # https://stackoverflow.com/a/32744088 for using numpy to delete certain entries:
-            # copy = np.delete(copy, indices).tolist()
 
             # now i want to delete the entries that need to be canceled from the list:
             indices.reverse()
@@ -346,17 +324,15 @@ class Net(object):
             for i in indices:
                 idx = indices[-i - 1]
                 heap_delete(self.event_list, idx)
-                # TODO this might actually be worse than just using del here and heapify in the end
-                #  I think this would be both O(n)?
+                #  this might actually be slower than just using del here and heapify in the end
+                #  Or would it be both O(n)?
 
-            # this is O(n) and by using siftdown and siftup each time i delete an entry i could make it faster, O(logn)
+            # this fct is O(n) and by using siftdown and siftup each time i delete an entry i could make it faster, O(logn)
             # however, I have to traverse the whole list anyways at the start so it will always be O(n)...
-            # heapq.heapify(copy)
-            # self.event_list = copy
             return
 
         else:  # # want to delete just next event of that type for that individual
-            # TODO this is not efficient
+            # TODO this might not be efficient
             cancel_prioritized = sorted(fitting_events, key=lambda x: x[0])  # sort for time
             try:
                 i = cancel_prioritized[0][1]  # gets index of original heap
@@ -381,11 +357,13 @@ class Net(object):
             mean += counts
         mean /= len(results)
 
+        # TODO could add standard deviation as well
+
         return mean
 
     def reset(self, hard=False):
         # see note in __init__. Short: reset to original state (deepcopy), OR redo whole network
-        # TODO unsafe? hard option of reset() might be rather quick & dirty
+
         if hard:
             self.__init__(self.n, self.p, self.p_i, self.max_t, self.last_seed + 1,
                           clustering_target=self.clustering_target)
@@ -396,22 +374,20 @@ class Net(object):
                     try:
                         self.__dict__[key] = self.init_state[key].copy()
                     except AttributeError:
-                        # print(key)
                         self.__dict__[key] = self.init_state[key]
 
     # visuals
 
-    def plot_timeseries(self, counts=None, save=None, discrete_plots = False):
+    def plot_timeseries(self, counts=None, save=None, discrete_plots=False):
         print('Plotting time series...')
 
         plt.clf()
 
-        n_counts = self.counts.shape[1]
-        ts = np.arange(start=0, stop=self.max_t, step=resolution)
-
-        # TODO this is not optimal... I would like the vertical lines to disappear
+        # TODO the discrete view looks bad- haven't found a nice way to
+        #  visualize the 0th order spline /hold
         # from https://docs.scipy.org/doc/scipy/reference/tutorial/interpolate.html
-        # x = np.linspace(0, 10, num=11, endpoint=True)
+
+        ts = np.arange(start=0, stop=self.max_t, step=resolution)
         x = ts
 
         # by default, i use the class's last simulation results.
@@ -422,29 +398,23 @@ class Net(object):
             y = self.counts.T  # in case counts is not given, take the ones saved from last simulation
 
         ax = plt.gca()
-        ax.set_prop_cycle(color=['green', 'yellow','red','grey'])
+        ax.set_prop_cycle(color=['green', 'yellow', 'red', 'grey'])  # same as net colormap
 
         if discrete_plots:
             f = interp1d(x, y, kind='zero', axis=0)
-            xnew = np.linspace(0, self.max_t - resolution, num=10001, endpoint=False)
+            x_new = np.linspace(0, self.max_t - resolution, num=10001, endpoint=False)
 
-            plt.plot(xnew, f(xnew))
+            plt.plot(x_new, f(x_new))
 
         else:
-            plt.plot(x,y)
+            plt.plot(x, y)
 
         plt.legend(['susceptible', 'exposed', 'infected', 'recovered'])
-
 
         if save:
             plt.savefig(save)
         else:
             plt.show()
-
-
-
-        # plt.plot(ts, self.counts.T)
-        # plt.show()
 
     def draw(self):
         pos = self.pos
@@ -453,7 +423,7 @@ class Net(object):
 
         plt.show()
 
-    def animate_last_sim(self, dest = None):
+    def animate_last_sim(self, dest=None):
         print("Generating animation...")
         start = time.time()
 
@@ -471,17 +441,12 @@ class Net(object):
             # edges = nx.draw_networkx_edges(self.graph, pos, width=0.1)
 
             return nodes,
-            # net_state = self.net_states[idx]
-
-            # graph = net_state[0]
-            # colormap = net_state[1]
-            # fig.clf()
-
-            # nx.draw(graph, node_color = colormap, pos = pos)
 
         anim = animation.FuncAnimation(fig, animate, frames=len(self.net_states), interval=1000, blit=False)
+
+        # save to specified dir or just in working dir
         if not dest:
-            anim.save('test.mp4')
+            anim.save('last_vid.mp4')
         else:
             anim.save(dest)
         plt.close(fig)
@@ -562,12 +527,10 @@ class Net(object):
                             current_coeff = nx.average_clustering(self.graph)  # heuristic, do it in batches
 
             counter += 1
-        # print(counter)
-        # print(nx.average_clustering(self.graph))
 
         assert (counter != budget), "no success in changing clustering coefficient accordingly"
 
-        return (current_coeff)
+        return current_coeff
 
 
 if __name__ == '__main__':
