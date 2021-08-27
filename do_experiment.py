@@ -25,11 +25,15 @@ def simple_experiment(n, p, p_i, mc_iterations, max_t, mode=None, force_recomput
         dirname_parent = os.path.dirname(__file__)
         dirname = os.path.join(dirname_parent, 'Experiments')
 
-    tag = "n{0}_p{1}_mc{2}".format(n, str(p), mc_iterations)
-    if mode:
-        tag += '_' + mode
-    if clustering:
-        tag += '_clustering{}'.format(clustering)
+    # tag = "n{0}_p{1}_mc{2}".format(n, str(p), mc_iterations)
+    # if mode:
+    #     tag += '_' + mode
+    # if clustering:
+    #     tag += '_clustering{}'.format(clustering)
+
+    # the cache is now tagged with a hash from all important parameters instead of the above.
+    id_params = (n,p,p_i,mc_iterations,max_t,mode,clustering,t_i,t_c,t_r,t_d,t_t,quarantine_time,resolution,clustering_epsilon)
+    tag = str(hash(id_params))
 
     # disables loading pickled results
     if force_recompute:
@@ -210,7 +214,7 @@ def vary_p_plot_cache(res, n, p_i, mc_iterations, max_t, interval=(0, 1), force_
     ax3.set_xticks(ps[1:-2],minor=True)
     ax3.set_xticks([interval[0],interval[1]])
 
-    plt.legend(['vanilla', 'quarantine', 'tracing'])
+    plt.legend(['Vanilla', 'Quarantine', 'Tracing'])
 
     plt.tick_params(
         axis='x',
