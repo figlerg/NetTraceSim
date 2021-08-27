@@ -51,7 +51,7 @@ class Net(object):
                 # I save this so I can choose a different one when I want to create a new net in mc
 
         if self.clustering_target:
-            self.alter_clustering_coeff(clustering_target, clustering_epsilon)
+            self.final_cluster_coeff = self.alter_clustering_coeff(clustering_target, clustering_epsilon)
 
         # I don't want to deal with a whole mutable state list, so I only save the current count at regular intervals:
         self.count = np.zeros([4, 1], dtype=np.int32).flatten()  # current state
@@ -493,6 +493,8 @@ class Net(object):
         current_coeff = nx.average_clustering(self.graph)
 
         budget = 10000
+        check_skipping = self.n/10
+        # This should depend on n since for smaller networks each swapped edge is weighted heavier
         counter = 0
 
         while abs(current_coeff - target) > epsilon and counter < budget:
@@ -513,7 +515,7 @@ class Net(object):
                         self.graph.remove_edge(b, c)
                         self.graph.add_edge(a, c)
                         # current_coeff = nx.average_clustering(self.graph)
-                        if counter % 100 == 0:  # 100 is just an idea
+                        if counter % check_skipping == 0:
                             current_coeff = nx.average_clustering(self.graph)  # heuristic, do it in batches
                 else:
                     # b gets edge from a

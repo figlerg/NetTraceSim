@@ -16,10 +16,10 @@ import os
 n = 500
 p = 0.008
 p_i = 0.5
-mc_iterations = 1
+mc_iterations = 10
 max_t = 200
 
-res = 50
+res = 5
 # interval = (0.008,0.03)
 interval = (0.1*p,5*p)
 # this means <res> equidistant points on <interval>

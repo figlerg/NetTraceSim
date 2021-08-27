@@ -4,6 +4,7 @@ from net import Net
 from globals import *
 import matplotlib.pyplot as plt
 import matplotlib
+import hashlib
 
 
 # font = {#'family' : 'normal',
@@ -32,8 +33,13 @@ def simple_experiment(n, p, p_i, mc_iterations, max_t, mode=None, force_recomput
     #     tag += '_clustering{}'.format(clustering)
 
     # the cache is now tagged with a hash from all important parameters instead of the above.
+    # Any change to the model parameters will certainly trigger a recompute now
     id_params = (n,p,p_i,mc_iterations,max_t,mode,clustering,t_i,t_c,t_r,t_d,t_t,quarantine_time,resolution,clustering_epsilon)
-    tag = str(hash(id_params))
+    # tag = str(hash(id_params))
+    # tag = hashlib.md5(str(id_params))
+    # normal hashes are salted between runs -> use something that is persistent
+    tag = str(hashlib.md5(str(id_params).encode('utf8')).hexdigest())
+
 
     # disables loading pickled results
     if force_recompute:
@@ -292,7 +298,7 @@ def vary_C(res, n, p, p_i, mc_iterations, max_t, interval=None, mode=None, force
 
     if not interval:
         # THEORY: the average clustering coeff of erdos renyi networks is p!
-        # so
+        # so I test around that to see what changed
         interval = (0.5*p,10*p)
 
     # res parameter defines how many points on [0,1] are used
@@ -303,14 +309,31 @@ def vary_C(res, n, p, p_i, mc_iterations, max_t, interval=None, mode=None, force
 
     Cs = np.linspace(interval[0], interval[1], endpoint=True, num=res)
 
+    unsuccessful_flag = []
     for i, C in enumerate(Cs):
-        net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence = \
-            simple_experiment(n, p, p_i, mc_iterations, max_t, mode, path=path, force_recompute=force_recompute,
-                              clustering=C)
+        try:
+            net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence = \
+                simple_experiment(n, p, p_i, mc_iterations, max_t, mode, path=path, force_recompute=force_recompute,
+                                  clustering=C)
+            peak_times[i] = t_peak
+            peak_heights[i] = peak_height
+            period_prevalences[i] = period_prevalence
 
-        peak_times[i] = t_peak
-        peak_heights[i] = peak_height
-        period_prevalences[i] = period_prevalence
+            Cs[i] = net.final_cluster_coeff # in the end I want to plot the actual coeff, not the target
+            # should specify this in the paper
+        except AssertionError:
+            print('Clustering target not reached')
+
+            unsuccessful_flag.append(i)
+            peak_times[i] = np.nan
+            peak_heights[i] = np.nan
+            period_prevalences[i] = np.nan
+
+            Cs[i] = np.nan
+
+
+
+
 
     fig, axes = plt.subplots(3, 1, sharex=True, figsize=(14, 14/16*9))
 
