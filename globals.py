@@ -8,8 +8,8 @@ t_i = 2  # incubation time
 t_r = 10  # recovery time
 t_c = 1  # time between contacts
 
-t_d = 5 # average time until infection is noticed
-t_t = 1 # average time until contact is found and put into quarantine
+t_d = 6 # average time until infection is noticed
+t_t = 3 # average time until contact is found and put into quarantine
 
 quarantine_time = 14 # this should probably be a fixed time
 

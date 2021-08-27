@@ -5,6 +5,8 @@ import matplotlib
 import heapq
 import matplotlib.animation as animation
 import time
+
+import numpy as np
 from scipy.interpolate import interp1d
 import math
 from typing import List
@@ -357,9 +359,14 @@ class Net(object):
             mean += counts
         mean /= len(results)
 
-        # TODO could add standard deviation as well
+        variance = np.zeros(results[0].shape)
+        for counts in results:
+            variance += np.square(counts-mean)
+        variance /= len(results)
 
-        return mean
+        sd = np.sqrt(variance)
+
+        return mean, sd
 
     def reset(self, hard=False):
         # see note in __init__. Short: reset to original state (deepcopy), OR redo whole network
@@ -378,10 +385,14 @@ class Net(object):
 
     # visuals
 
-    def plot_timeseries(self, counts=None, save=None, discrete_plots=False):
+    def plot_timeseries(self, counts=None, sd=None, save=None, discrete_plots=False, existing_ax=None):
         print('Plotting time series...')
 
-        plt.clf()
+        if not existing_ax:
+            # in case of an existing ax, I cannot call these functions or they create a new ax
+            plt.clf()
+            plt.legend(['susceptible', 'exposed', 'infected', 'recovered'])
+
 
         # TODO the discrete view looks bad- haven't found a nice way to
         #  visualize the 0th order spline /hold
@@ -397,22 +408,34 @@ class Net(object):
         else:
             y = self.counts.T  # in case counts is not given, take the ones saved from last simulation
 
-        ax = plt.gca()
+        ax:matplotlib.axes.Axes = existing_ax or plt.gca()
         ax.set_prop_cycle(color=['green', 'yellow', 'red', 'grey'])  # same as net colormap
+
+        # ax.set_aspect((ax.get_ylim()[1]-ax.get_ylim()[0])*16/((ax.get_xlim()[1]-ax.get_xlim()[0])*9))
 
         if discrete_plots:
             f = interp1d(x, y, kind='zero', axis=0)
             x_new = np.linspace(0, self.max_t - resolution, num=10001, endpoint=False)
 
-            plt.plot(x_new, f(x_new))
+            ax.plot(x_new, f(x_new))
+
+            assert not isinstance(sd, np.ndarray), \
+                "discrete view does not make much sense for standard deviation, " \
+                "not implemented"
 
         else:
-            plt.plot(x, y)
+            ax.plot(x, y)
 
-        plt.legend(['susceptible', 'exposed', 'infected', 'recovered'])
+            if isinstance(sd, np.ndarray):
+                ax.plot(x,y+sd.T, '--', x,y-sd.T, '--')
+
 
         if save:
+            assert not ax, 'save = True is not supported with an input ax. ' \
+                           'The latter is only for plotting something as part of a bigger function'
             plt.savefig(save)
+        elif ax:
+            return ax
         else:
             plt.show()
 
