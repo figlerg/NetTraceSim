@@ -552,7 +552,8 @@ class Net(object):
                             current_coeff = nx.average_clustering(self.graph)  # heuristic, do it in batches
 
             counter += 1
-
+        if counter == budget:
+            print('target:{}, val:{}'.format(target,current_coeff))
         assert (counter != budget), "no success in changing clustering coefficient accordingly"
 
         return current_coeff

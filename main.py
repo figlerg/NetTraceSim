@@ -1,4 +1,5 @@
 # code is in net.py and montecarlo.py
+import matplotlib.pyplot as plt
 
 from net import Net
 import pickle
@@ -22,36 +23,26 @@ import os
 
 
 res = 20
-n = 20
+n = 10
 p = 0.5
 p_i = 0.5
-mc_iterations = 40
+mc_iterations = 100
 max_t = 200
 
 working_dir = os.getcwd()
 path = working_dir.join(['Experiments',])
 
 
-# from do_experiment import vary_p, vary_p_i
-# path = r'C:\Users\giglerf\Google Drive\Seminar_Networks\Experiments\vary_params'
-# vary_p(res=res,n=n,p_i=p_i, mc_iterations=mc_iterations, max_t=max_t, force_recompute=False, path = path)
-# vary_p(res=res,n=n,p_i=p_i, mc_iterations=mc_iterations, max_t=max_t, force_recompute=False, mode='quarantine', path = path)
-# vary_p(res=res,n=n,p_i=p_i, mc_iterations=mc_iterations, max_t=max_t, force_recompute=False, mode='tracing', path = path)
-#
-# vary_p_i(res=res,n=n,p=p, mc_iterations=mc_iterations, max_t=max_t, force_recompute=False, path = path)
-# vary_p_i(res=res,n=n,p=p, mc_iterations=mc_iterations, max_t=max_t, force_recompute=False, mode='quarantine', path = path)
-# vary_p_i(res=res,n=n,p=p, mc_iterations=mc_iterations, max_t=max_t, force_recompute=False, mode='tracing', path = path)
 
-net1, counts1,sd, t_peak1, peak_height1, equilib_flag1, durchseuchung1 = simple_experiment(n,p,p_i, mc_iterations, max_t, force_recompute=True, path=path, mode = 'tracing')
-# net2, counts2, t_peak2, peak_height2, equilib_flag2, durchseuchung2 = simple_experiment(n,p,p_i, mc_iterations, max_t,clustering=0.3, force_recompute=False, path=path, mode = 'tracing')
+net1, counts1,sd, t_peak1, peak_height1, equilib_flag1, durchseuchung1 = simple_experiment(n,p,p_i, mc_iterations, max_t, force_recompute=True, path=path, mode = 'tracing', clustering=3)
 
-# net1.animate_last_sim()
+net1.animate_last_sim()
 
-# print(net1.clustering())
-# print(net2.clustering())
+print(net1.clustering())
 
 net1.plot_timeseries(counts1, sd=sd)
-# net2.plot_timeseries(counts2)
+
+plt.show()
 
 
 

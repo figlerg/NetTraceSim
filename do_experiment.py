@@ -312,14 +312,23 @@ def vary_C(res, n, p, p_i, mc_iterations, max_t, interval=None, mode=None, force
     unsuccessful_flag = []
     for i, C in enumerate(Cs):
         try:
+            try:
+                tmp = counts
+                first = False
+            except:
+                first = True
             net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence = \
                 simple_experiment(n, p, p_i, mc_iterations, max_t, mode, path=path, force_recompute=force_recompute,
                                   clustering=C)
+            if not first:
+                print(net.final_cluster_coeff)
+                print(C)
+                print((tmp == counts).all())
             peak_times[i] = t_peak
             peak_heights[i] = peak_height
             period_prevalences[i] = period_prevalence
 
-            Cs[i] = net.final_cluster_coeff # in the end I want to plot the actual coeff, not the target
+            # Cs[i] = net.final_cluster_coeff # in the end I want to plot the actual coeff, not the target
             # should specify this in the paper
         except AssertionError:
             print('Clustering target not reached')
@@ -360,22 +369,23 @@ def vary_C(res, n, p, p_i, mc_iterations, max_t, interval=None, mode=None, force
     ax3.set_xticks(Cs[1:-2],minor=True)
     ax3.set_xticks([interval[0],interval[1]])
 
-    plt.tick_params(
-        axis='x',          # changes apply to the x-axis
-        which='minor',      # both major and minor ticks are affected
-        # bottom=False,      # ticks along the bottom edge are off
-        # top=False,         # ticks along the top edge are off
-        labelbottom=False) # labels along the bottom edge are off
+    # plt.tick_params(
+    #     axis='x',          # changes apply to the x-axis
+    #     which='minor',      # both major and minor ticks are affected
+    #     # bottom=False,      # ticks along the bottom edge are off
+    #     # top=False,         # ticks along the top edge are off
+    #     labelbottom=False) # labels along the bottom edge are off
 
     # plt.xticks([interval[0],interval[1]])
 
-
     if mode:
-        fig.savefig(os.path.join(path, 'Cvaried_n{}_p{}_{}'.format(
-            n,str(interval[0])+'to'+str(interval[1]), mode) + '.png'))
+        parent = os.path.dirname(path)
+        fig.savefig(os.path.join(parent,'Pics', 'Cvaried_n{}_p{}_{}'.format(
+            n,str(interval[0])+'to'+str(interval[1]), mode) + '.png'),bbox_inches = 'tight')
     else:
-        fig.savefig(os.path.join(path, 'Cvaried_n{}_p{}'.format(
-            n, str(interval[0])+'to'+str(interval[1])) + '.png'))
+        parent = os.path.dirname(path)
+        fig.savefig(os.path.join(parent,'Pics', 'Cvaried_n{}_p{}'.format(
+            n,str(interval[0])+'to'+str(interval[1])) + '.png'),bbox_inches = 'tight')
 
 
 if __name__ == '__main__':
