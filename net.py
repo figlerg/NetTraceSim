@@ -1,4 +1,6 @@
 # network is a class that implements the full simulation environment
+import copy
+
 import networkx as nx
 import matplotlib.pyplot as plt
 import matplotlib
@@ -7,6 +9,7 @@ import matplotlib.animation as animation
 import time
 
 import numpy as np
+import pandas as pd
 from scipy.interpolate import interp1d
 import math
 from typing import List
@@ -17,7 +20,7 @@ from helpers import heap_delete
 
 class Net(object):
 
-    def __init__(self, n, p, p_i, max_t, seed, clustering_target=None,clustering_batchsize=None):
+    def __init__(self, n, p, p_i, max_t, seed, clustering_target=None):
 
         # TODO try to decrease complexity, this seems convoluted
 
@@ -33,10 +36,12 @@ class Net(object):
         self.graph = nx.fast_gnp_random_graph(n, p, seed=seed)  # network structure
         self.colormap = ['green' for i in range(n)]  # for visualization in networks
         self.clustering_target = clustering_target  # the desired clustering coeff
-        self.clustering_batchsize = clustering_batchsize
 
         self.event_list = []  # create event list as list and heapify for priority queue
         heapq.heapify(self.event_list)
+
+        #for dumping the event history (verification)
+        self.event_history = []
 
         if p == 0:
             print('Warning: p = 0, so the graph will not be checked for connectedness.')
@@ -120,12 +125,19 @@ class Net(object):
 
         if mode == 'quarantine' or mode == 'tracing':
             t_q_random = np.random.exponential(scale=t_d, size=1)[0]
-            heapq.heappush(self.event_list, (time + t_q_random, QUARANTINE, id))
+
+            # in some cases the infection isn't noticed
+            u = np.random.uniform()
+            if u < p_q:
+                heapq.heappush(self.event_list, (time + t_q_random, QUARANTINE, id))
 
             if mode == 'tracing':
-                heapq.heappush(self.event_list, (time + t_q_random, TRACING, id))
-                # I will simply do these two at the same time (when the infection is detected)
-                # the tracing event adds a little bit of time for the process of finding and alerting contacts
+
+                # if infection isn't noticed, no tracing is issued (same u of course)
+                if u < p_q:
+                    heapq.heappush(self.event_list, (time + t_q_random, TRACING, id))
+                    # I will simply do these two at the same time (when the infection is detected)
+                    # the tracing event adds a little bit of time for the process of finding and alerting contacts
 
     def contact(self, time, id):
 
@@ -226,7 +238,9 @@ class Net(object):
         contacts = self.graph.nodes[id]['contacts']
         for contact in contacts:
             t_t_random = np.random.exponential(scale=t_t, size=1)[0]
-            heapq.heappush(self.event_list, (time + t_t_random, QUARANTINE, contact))
+
+            if np.random.uniform() < p_t:
+                heapq.heappush(self.event_list, (time + t_t_random, QUARANTINE, contact))
         contacts.clear()
 
     # simulation
@@ -276,6 +290,9 @@ class Net(object):
         time = event[0]
         type = event[1]
         id = event[2]
+
+        self.event_history.append(event)
+
         # events:
         # 0:infection
         # 1:infectious
@@ -478,6 +495,24 @@ class Net(object):
         end = time.time()
         print('Saved animation. Time elapsed: {}s.'.format(end - start))
 
+    def parse_event_history(self):
+        out = []
+        for event in self.event_history:
+            out.append(list(event))
+
+        # rename the type ints for better reading
+        for event in out:
+            type = event[1]
+            str_map = {0:'Infection', 1:'Infectious', 2:'Contact', 3:'Recover',4:'Quarantine',
+                       5:'End of Tracing', 6:'Tracing'}
+
+            event[1] = str_map[type]
+
+        out = pd.DataFrame(out, columns=['t','Type','ID'])
+
+
+        return out
+
     # convenience:
 
     def update_state(self, id, state):
@@ -584,7 +619,7 @@ class Net(object):
 
 if __name__ == '__main__':
     p_i = 0.9
-    net = Net(n=100, p_i=p_i, p=0.3, seed=123, max_t=100)
+    net = Net(n=100, p=0.3, p_i=p_i, max_t=100, seed=123)
     # net.draw()
 
     test1 = net.sim(seed=123, mode='quarantine')

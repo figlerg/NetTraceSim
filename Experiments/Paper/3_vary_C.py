@@ -16,7 +16,7 @@ import os
 n = 500
 p = 0.008
 p_i = 0.5
-mc_iterations = 20
+mc_iterations = 100
 max_t = 200
 
 res = 10
@@ -29,4 +29,4 @@ working_dir = os.getcwd()
 path = os.path.join(working_dir,'Cache')
 
 # the plots are created in cache folder
-vary_C(res,n,p,p_i,mc_iterations,max_t,interval,mode='tracing',force_recompute=True,path=path)
+vary_C(res,n,p,p_i,mc_iterations,max_t,interval,mode='tracing',force_recompute=False,path=path)

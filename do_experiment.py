@@ -34,7 +34,7 @@ def simple_experiment(n, p, p_i, mc_iterations, max_t, mode=None, force_recomput
 
     # the cache is now tagged with a hash from all important parameters instead of the above.
     # Any change to the model parameters will certainly trigger a recompute now
-    id_params = (n,p,p_i,mc_iterations,max_t,mode,clustering,t_i,t_c,t_r,t_d,t_t,quarantine_time,resolution,clustering_epsilon)
+    id_params = (n,p,p_i,mc_iterations,max_t,mode,clustering,t_i,t_c,t_r,t_d,t_t,p_q,p_t,quarantine_time,resolution,clustering_epsilon)
     # tag = str(hash(id_params))
     # tag = hashlib.md5(str(id_params))
     # normal hashes are salted between runs -> use something that is persistent
@@ -44,7 +44,7 @@ def simple_experiment(n, p, p_i, mc_iterations, max_t, mode=None, force_recomput
     # disables loading pickled results
     if force_recompute:
         # if false, it looks at saved experiments and reuses those
-        net = Net(n=n, p=p, p_i=p_i, seed=123, max_t=max_t, clustering_target=clustering)
+        net = Net(n=n, p=p, p_i=p_i, max_t=max_t, seed=123, clustering_target=clustering)
         counts, sd = net.monte_carlo(mc_iterations, mode=mode)
         with open(os.path.join(dirname, tag + '_net.p'), 'wb') as f:
             pickle.dump(net, f)
@@ -65,7 +65,7 @@ def simple_experiment(n, p, p_i, mc_iterations, max_t, mode=None, force_recomput
             print('Experiment results have been loaded from history.')
 
         except FileNotFoundError:
-            net = Net(n=n, p=p, p_i=p_i, seed=123, max_t=max_t, clustering_target=clustering)
+            net = Net(n=n, p=p, p_i=p_i, max_t=max_t, seed=123, clustering_target=clustering)
 
             counts, sd = net.monte_carlo(mc_iterations, mode=mode)
             with open(os.path.join(dirname, tag + '_net.p'), 'wb') as f:
@@ -338,7 +338,6 @@ def vary_C(res, n, p, p_i, mc_iterations, max_t, interval=None, mode=None, force
             peak_heights[i] = np.nan
             period_prevalences[i] = np.nan
 
-            Cs[i] = np.nan
 
 
 

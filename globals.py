@@ -8,8 +8,10 @@ t_i = 2  # incubation time
 t_r = 10  # recovery time
 t_c = 1  # time between contacts
 
-t_d = 8 # average time until infection is noticed
-t_t = 5 # average time until contact is found and put into quarantine
+t_d = 6 # average time until infection is noticed
+t_t = 4 # average time until contact is found and put into quarantine
+p_q = 0.5 # fraction of cases where the infection is noticed and quarantine is issued
+p_t = 0.75
 
 quarantine_time = 14 # this should probably be a fixed time
 
@@ -20,7 +22,7 @@ resolution = 1  # days for each animation frame, abtastrate (right now only ints
 
 redo_net = 5 # every i iterations, monte carlo also changes network
 
-clustering_epsilon = 0.1
+clustering_epsilon = 0.1 # this is a relative epsilon (to p of network). 0.1 means within 10% of p
 
 
 INFECTION = 0
