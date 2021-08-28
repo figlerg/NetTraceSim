@@ -497,7 +497,8 @@ class Net(object):
         # This should depend on n since for smaller networks each swapped edge is weighted heavier
         counter = 0
 
-        while abs(current_coeff - target) > epsilon and counter < budget:
+        # the epsilon tolerance is relative to p, the normal clustering coeff in a random network
+        while abs(current_coeff - target) > epsilon*self.p and counter < budget:
             a, b = np.random.randint(0, high=self.n, size=2, dtype=int)
 
             neighbors_a = list(self.graph.neighbors(a))
