@@ -19,9 +19,9 @@ p_i = 0.5
 mc_iterations = 20
 max_t = 200
 
-res = 5
+res = 10
 # interval = (0.008,0.03)
-interval = (p,3*p)
+interval = (p,10*p)
 # this means <res> equidistant points on <interval>
 
 
@@ -29,4 +29,4 @@ working_dir = os.getcwd()
 path = os.path.join(working_dir,'Cache')
 
 # the plots are created in cache folder
-vary_C(res,n,p,p_i,mc_iterations,max_t,interval,mode='tracing',force_recompute=False,path=path)
+vary_C(res,n,p,p_i,mc_iterations,max_t,interval,mode='tracing',force_recompute=True,path=path)

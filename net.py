@@ -17,7 +17,7 @@ from helpers import heap_delete
 
 class Net(object):
 
-    def __init__(self, n, p, p_i, max_t, seed, clustering_target=None):
+    def __init__(self, n, p, p_i, max_t, seed, clustering_target=None,clustering_batchsize=None):
 
         # TODO try to decrease complexity, this seems convoluted
 
@@ -33,6 +33,7 @@ class Net(object):
         self.graph = nx.fast_gnp_random_graph(n, p, seed=seed)  # network structure
         self.colormap = ['green' for i in range(n)]  # for visualization in networks
         self.clustering_target = clustering_target  # the desired clustering coeff
+        self.clustering_batchsize = clustering_batchsize
 
         self.event_list = []  # create event list as list and heapify for priority queue
         heapq.heapify(self.event_list)
@@ -492,10 +493,13 @@ class Net(object):
 
         current_coeff = nx.average_clustering(self.graph)
 
-        budget = 10000
-        check_skipping = self.n/10
+        budget = 10000 * self.n
+
+
+        check_skipping = self.n/5
         # This should depend on n since for smaller networks each swapped edge is weighted heavier
         counter = 0
+        stage = 0 # try several different check skipping values, maybe convergence is too fast/too slow
 
         # the epsilon tolerance is relative to p, the normal clustering coeff in a random network
         while abs(current_coeff - target) > epsilon*self.p and counter < budget:
@@ -517,6 +521,8 @@ class Net(object):
                         self.graph.add_edge(a, c)
                         # current_coeff = nx.average_clustering(self.graph)
                         if counter % check_skipping == 0:
+                            # print(current_coeff)
+                            # print(len(self.graph.edges))
                             current_coeff = nx.average_clustering(self.graph)  # heuristic, do it in batches
                 else:
                     # b gets edge from a
@@ -553,8 +559,24 @@ class Net(object):
                             current_coeff = nx.average_clustering(self.graph)  # heuristic, do it in batches
 
             counter += 1
-        if counter == budget:
-            print('target:{}, val:{}'.format(target,current_coeff))
+            if counter == budget:
+                if stage == 0:
+                    print('Having difficulties reaching clustering target- changing skipping constant')
+                    check_skipping /= 4
+                    counter = 0
+                    stage += 1
+                    print('target:{}, val:{}'.format(target,current_coeff))
+                    continue
+                elif stage == 1:
+                    print('Having difficulties reaching clustering target- changing skipping constant')
+                    check_skipping *= 16
+                    counter = 0
+                    stage += 1
+                    print('target:{}, val:{}'.format(target,current_coeff))
+                    continue
+
+
+
         assert (counter != budget), "no success in changing clustering coefficient accordingly"
 
         return current_coeff

@@ -20,7 +20,7 @@ resolution = 1  # days for each animation frame, abtastrate (right now only ints
 
 redo_net = 5 # every i iterations, monte carlo also changes network
 
-clustering_epsilon = 0.005
+clustering_epsilon = 0.1
 
 
 INFECTION = 0
