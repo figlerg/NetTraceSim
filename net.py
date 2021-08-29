@@ -531,7 +531,7 @@ class Net(object):
         budget = 10000 * self.n
 
 
-        check_skipping = self.n/5
+        check_skipping = self.n/2
         # This should depend on n since for smaller networks each swapped edge is weighted heavier
         counter = 0
         stage = 0 # try several different check skipping values, maybe convergence is too fast/too slow
@@ -594,6 +594,8 @@ class Net(object):
                             current_coeff = nx.average_clustering(self.graph)  # heuristic, do it in batches
 
             counter += 1
+
+            # trying some bigger and smaller batch sizes
             if counter == budget:
                 if stage == 0:
                     print('Having difficulties reaching clustering target- changing skipping constant')
@@ -605,6 +607,20 @@ class Net(object):
                 elif stage == 1:
                     print('Having difficulties reaching clustering target- changing skipping constant')
                     check_skipping *= 16
+                    counter = 0
+                    stage += 1
+                    print('target:{}, val:{}'.format(target,current_coeff))
+                    continue
+                elif stage == 2:
+                    print('Having difficulties reaching clustering target- changing skipping constant')
+                    check_skipping = check_skipping/4 *10
+                    counter = 0
+                    stage += 1
+                    print('target:{}, val:{}'.format(target,current_coeff))
+                    continue
+                elif stage == 3:
+                    print('Having difficulties reaching clustering target- changing skipping constant')
+                    check_skipping = check_skipping/10/10
                     counter = 0
                     stage += 1
                     print('target:{}, val:{}'.format(target,current_coeff))

@@ -26,22 +26,14 @@ net.sim(seed)
 
 working_dir = os.getcwd()
 path = os.path.join(working_dir,'Verification')
-net.animate_last_sim(dest = path+'verification_run_example.gif')
+name = os.path.join(path,'verification_run_example.mp4')
+net.animate_last_sim(dest=name)
 df:pd.DataFrame = net.parse_event_history()
 
-print(df.to_latex)
+name2 = os.path.join(path,'verification_run_example.txt')
+with open(name2,'w') as f:
+    f.write(df.to_latex())
 
-
-
-# net1, counts1,sd, t_peak1, peak_height1, equilib_flag1, durchseuchung1 = simple_experiment(n,p,p_i, mc_iterations, max_t, force_recompute=True, path=path, mode = 'tracing', clustering=3)
-
-# net1.animate_last_sim()
-
-# print(net1.clustering())
-
-# net1.plot_timeseries(counts1, sd=sd)
-
-plt.show()
 
 
 

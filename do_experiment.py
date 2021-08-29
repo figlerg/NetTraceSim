@@ -35,8 +35,6 @@ def simple_experiment(n, p, p_i, mc_iterations, max_t, mode=None, force_recomput
     # the cache is now tagged with a hash from all important parameters instead of the above.
     # Any change to the model parameters will certainly trigger a recompute now
     id_params = (n,p,p_i,mc_iterations,max_t,mode,clustering,t_i,t_c,t_r,t_d,t_t,p_q,p_t,quarantine_time,resolution,clustering_epsilon)
-    # tag = str(hash(id_params))
-    # tag = hashlib.md5(str(id_params))
     # normal hashes are salted between runs -> use something that is persistent
     tag = str(hashlib.md5(str(id_params).encode('utf8')).hexdigest())
 
@@ -340,6 +338,19 @@ def vary_C(res, n, p, p_i, mc_iterations, max_t, interval=None, mode=None, force
 
 
 
+    dirname_parent = os.path.dirname(__file__)
+    dirname = os.path.join(dirname_parent,'Experiments','Paper', 'Cache')
+
+    id_params = (n,p,p_i,mc_iterations,max_t,mode,interval,t_i,t_c,t_r,t_d,t_t,p_q,p_t,quarantine_time,resolution,clustering_epsilon)
+    # normal hashes are salted between runs -> use something that is persistent
+    tag = str(hashlib.md5(str(id_params).encode('utf8')).hexdigest())
+
+    with open(os.path.join(dirname,tag+'_metrics.p'),'wb') as f:
+        out = [Cs, unsuccessful_flag,peak_times, peak_heights,period_prevalences]
+
+        pickle.dump(out, f)
+
+
 
 
 
@@ -383,8 +394,10 @@ def vary_C(res, n, p, p_i, mc_iterations, max_t, interval=None, mode=None, force
             n,str(interval[0])+'to'+str(interval[1]), mode) + '.png'),bbox_inches = 'tight')
     else:
         parent = os.path.dirname(path)
-        fig.savefig(os.path.join(parent,'Pics', 'Cvaried_n{}_p{}'.format(
+        fig.savefig(os.path.join(parent,'Pics', 'Cvaried_n{}_C{}'.format(
             n,str(interval[0])+'to'+str(interval[1])) + '.png'),bbox_inches = 'tight')
+
+    return out # Cs, unsuccessful_flags, times, peaks, period_prev
 
 
 if __name__ == '__main__':
