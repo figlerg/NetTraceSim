@@ -141,8 +141,6 @@ class Net(object):
 
     def contact(self, time, id):
 
-        # friends = list(self.graph.neighbors(id))
-        # connections = list(self.graph.edges)
         friends = list((friend for friend in self.graph.neighbors(id)
                         if self.graph.edges[id, friend]['blocked'] == False))
         # can only use edges that aren't blocked due to quarantine
@@ -327,7 +325,7 @@ class Net(object):
 
         fitting_events = []
         for i, event in enumerate(copy):
-            if event[0] == event_id and event[2] == id:
+            if event[1] == event_id and event[2] == id:
                 fitting_events.append((event[0], i))
                 # with time and index i have all information needed to cancel
                 # NEXT scheduled event with this id and type
@@ -337,13 +335,10 @@ class Net(object):
             # https://stackoverflow.com/a/32744088 for using numpy to delete certain entries:
 
             # now i want to delete the entries that need to be canceled from the list:
-            indices.reverse()
             # traverse backwards because deleting the i-th entry would change the following indices
-            # NOTE: originally, they are ascending because of enumerate
-
-            for i in indices:
-                idx = indices[-i - 1]
-                heap_delete(self.event_list, idx)
+            # TODO this still deletes the wrong events
+            for i in reversed(indices):
+                heap_delete(self.event_list, i)
                 #  this might actually be slower than just using del here and heapify in the end
                 #  Or would it be both O(n)?
 

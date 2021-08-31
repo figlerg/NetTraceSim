@@ -15,6 +15,13 @@ import os
 #   3) compare between the three models
 
 
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--recompute', action='store_true', default=False)
+args = parser.parse_args()
+force_recompute = args.recompute
+
 res = 5
 n = 500
 p = 10/500
@@ -26,18 +33,21 @@ working_dir = os.getcwd()
 path = os.path.join(working_dir,'Cache')
 
 net1, counts1,sd1, t_peak1, peak_height1, equilib_flag1, durchseuchung1 = \
-    simple_experiment(n,p,p_i, mc_iterations, max_t, force_recompute=False,
+    simple_experiment(n,p,p_i, mc_iterations, max_t, force_recompute=force_recompute,
                       path=path, mode = None)
 net2, counts2,sd2, t_peak2, peak_height2, equilib_flag2, durchseuchung2 = \
-    simple_experiment(n,p,p_i, mc_iterations, max_t, force_recompute=False,
+    simple_experiment(n,p,p_i, mc_iterations, max_t, force_recompute=force_recompute,
                       path=path, mode = 'quarantine')
 net3, counts3,sd3, t_peak3, peak_height3, equilib_flag3, durchseuchung3 = \
-    simple_experiment(n,p,p_i, mc_iterations, max_t, force_recompute=False,
+    simple_experiment(n,p,p_i, mc_iterations, max_t, force_recompute=force_recompute,
                       path=path, mode = 'tracing')
 
 peak_times = [t_peak1,t_peak2,t_peak3]
 peak_heights = [peak_height1,peak_height2,peak_height3]
 period_prevalences = [durchseuchung1,durchseuchung2,durchseuchung3]
+
+print('Effect of quarantine on peak height:{} % reduction of peak height'.format(1-(peak_height2/peak_height1)))
+print('Effect of quarantine on period prevalence:{} % reduction of affected people'.format(1-(durchseuchung2/durchseuchung1)))
 
 d = {'Peak time':peak_times, 'Peak prevalence':peak_heights, 'Fraction of affected':period_prevalences}
 

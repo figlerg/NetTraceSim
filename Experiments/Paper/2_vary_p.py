@@ -1,3 +1,5 @@
+import argparse
+
 from net import Net
 import pickle
 from do_experiment import *
@@ -11,7 +13,10 @@ import os
 #   2) compare between scenarios: vanilla vs quarantine vs tracing
 #   3) visualize via tables/heatmaps the effect of the latter two on the prevalence
 
-
+parser = argparse.ArgumentParser()
+parser.add_argument('--recompute', action='store_true', default=False)
+args = parser.parse_args()
+force_recompute = args.recompute
 
 n = 500
 p_i = 0.5
@@ -28,9 +33,9 @@ working_dir = os.getcwd()
 path = os.path.join(working_dir,'Cache')
 
 # the plots are created in cache folder
-# vary_p(res, n, p_i, mc_iterations, max_t,interval=interval, mode=None, force_recompute=False, path=path)
-# vary_p(res, n, p_i, mc_iterations, max_t,interval=interval, mode='quarantine', force_recompute=False, path=path)
-# vary_p(res, n, p_i, mc_iterations, max_t,interval=interval, mode='tracing', force_recompute=False, path=path)
+# vary_p(res, n, p_i, mc_iterations, max_t,interval=interval, mode=None, force_recompute=force_recompute, path=path)
+# vary_p(res, n, p_i, mc_iterations, max_t,interval=interval, mode='quarantine', force_recompute=force_recompute, path=path)
+# vary_p(res, n, p_i, mc_iterations, max_t,interval=interval, mode='tracing', force_recompute=force_recompute, path=path)
 
-vary_p_plot_cache(res, n, p_i, mc_iterations, max_t, interval=interval, force_recompute=False, path=path)
+vary_p_plot_cache(res, n, p_i, mc_iterations, max_t, interval=interval, force_recompute=force_recompute, path=path)
 
