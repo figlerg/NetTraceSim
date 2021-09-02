@@ -33,14 +33,11 @@ working_dir = os.getcwd()
 path = os.path.join(working_dir,'Cache')
 
 net1, counts1,sd1, t_peak1, peak_height1, equilib_flag1, durchseuchung1 = \
-    simple_experiment(n,p,p_i, mc_iterations, max_t, force_recompute=force_recompute,
-                      path=path, mode = None)
+    simple_experiment(n, p, p_i, mc_iterations, max_t, mode=None, force_recompute=force_recompute, path=path)
 net2, counts2,sd2, t_peak2, peak_height2, equilib_flag2, durchseuchung2 = \
-    simple_experiment(n,p,p_i, mc_iterations, max_t, force_recompute=force_recompute,
-                      path=path, mode = 'quarantine')
+    simple_experiment(n, p, p_i, mc_iterations, max_t, mode='quarantine', force_recompute=force_recompute, path=path)
 net3, counts3,sd3, t_peak3, peak_height3, equilib_flag3, durchseuchung3 = \
-    simple_experiment(n,p,p_i, mc_iterations, max_t, force_recompute=force_recompute,
-                      path=path, mode = 'tracing')
+    simple_experiment(n, p, p_i, mc_iterations, max_t, mode='tracing', force_recompute=force_recompute, path=path)
 
 peak_times = [t_peak1,t_peak2,t_peak3]
 peak_heights = [peak_height1,peak_height2,peak_height3]

@@ -34,7 +34,10 @@ path = working_dir.join(['Experiments',])
 
 
 
-net1, counts1,sd, t_peak1, peak_height1, equilib_flag1, durchseuchung1 = simple_experiment(n,p,p_i, mc_iterations, max_t, force_recompute=True, path=path, mode = 'tracing', clustering=3)
+net1, counts1,sd, t_peak1, peak_height1, equilib_flag1, durchseuchung1 = simple_experiment(n, p, p_i, mc_iterations,
+                                                                                           max_t, mode='tracing',
+                                                                                           force_recompute=True,
+                                                                                           path=path, dispersion=1)
 
 net1.animate_last_sim()
 

@@ -15,14 +15,15 @@ import math
 from typing import List
 
 from globals import *  # loading some variables and constants
-from helpers import heap_delete
+from helpers import heap_delete, disp
 
 
 class Net(object):
 
-    def __init__(self, n, p, p_i, max_t, seed, clustering_target=None):
+    def __init__(self, n, p, p_i, max_t, seed, clustering_target=None,
+                 dispersion_target = None):
 
-        # TODO try to decrease complexity, this seems convoluted
+
 
         print("Initializing network...")
         start = time.time()
@@ -36,6 +37,7 @@ class Net(object):
         self.graph = nx.fast_gnp_random_graph(n, p, seed=seed)  # network structure
         self.colormap = ['green' for i in range(n)]  # for visualization in networks
         self.clustering_target = clustering_target  # the desired clustering coeff
+        self.dispersion_target = dispersion_target # dispersion
 
         self.event_list = []  # create event list as list and heapify for priority queue
         heapq.heapify(self.event_list)
@@ -56,8 +58,12 @@ class Net(object):
                 self.last_seed = seed  # this is the seed that was used.
                 # I save this so I can choose a different one when I want to create a new net in mc
 
+        assert not (clustering_target and dispersion_target), "Cannot set a dispersion target and " \
+                                                            "a clustering target at the same time"
         if self.clustering_target:
-            self.final_cluster_coeff = self.alter_clustering_coeff(clustering_target, clustering_epsilon)
+            self.final_cluster_coeff = self.alter_clustering_coeff(clustering_target, epsilon_clustering)
+        if self.dispersion_target:
+            self.final_dispersion = self.alter_disp(dispersion_target, epsilon_disp)
 
         # I don't want to deal with a whole mutable state list, so I only save the current count at regular intervals:
         self.count = np.zeros([4, 1], dtype=np.int32).flatten()  # current state
@@ -626,6 +632,118 @@ class Net(object):
         assert (counter != budget), "no success in changing clustering coefficient accordingly"
 
         return current_coeff
+
+    def alter_disp(self, target, epsilon):
+        # to make less homogenous networks, this function redistributes edges until sufficiently close to goal
+
+        current_disp = disp(self.graph)
+
+        budget = 10000 * self.n
+        check_skipping = self.n/10
+        # This should depend on n since for smaller networks each swapped edge is weighted heavier
+
+        counter = 0
+        stage = 0 # try several different check skipping values, maybe convergence is too fast/too slow
+
+        # the epsilon tolerance is relative to p, the normal clustering coeff in a random network
+        while abs(current_disp - target) > epsilon and counter < budget:
+            a, b = np.random.randint(0, high=self.n, size=2, dtype=int)
+
+            neighbors_a = list(self.graph.neighbors(a))
+            neighbors_b = list(self.graph.neighbors(b))
+
+            if target > current_disp:
+                # currently coeff is too low
+
+                if len(neighbors_a) > len(neighbors_b):
+                    # a gets edge from b to increase coeff
+                    c = np.random.choice(neighbors_b)
+                    if (not c in neighbors_a) and len(neighbors_b) != 1:
+                        # only move an edge when no edge between new partners exist AND at least 1 edge would be left
+
+                        self.graph.remove_edge(b, c)
+                        self.graph.add_edge(a, c)
+                        # current_coeff = nx.average_clustering(self.graph)
+                        if counter % check_skipping == 0:
+                            # print(current_disp)
+                            # print(len(self.graph.edges))
+                            current_disp = disp(self.graph)
+                            # current_coeff = nx.average_clustering(self.graph)  # heuristic, do it in batches
+                else:
+                    # b gets edge from a
+                    c = np.random.choice(neighbors_a)
+                    if (not c in neighbors_b) and len(neighbors_a) != 1:
+                        # only move an edge when no edge between new partners exist AND at least 1 edge would be left
+                        self.graph.remove_edge(a, c)
+                        self.graph.add_edge(b, c)
+                        # current_coeff = nx.average_clustering(self.graph)
+                        if counter % 100 == 0:  # 100 is just an idea
+                            # current_coeff = nx.average_clustering(self.graph)  # heuristic, do it in batches
+                            current_disp = disp(self.graph)
+
+
+            else:
+                # coeff is too high
+                if len(neighbors_b) > len(neighbors_a):  # This is the only different line, everything is flipped
+                    # a gets edge from b to increase coeff
+                    c = np.random.choice(neighbors_b)
+                    if (not c in neighbors_a) and len(neighbors_b) != 1:
+                        # only move an edge when no edge between new partners exist AND at least 1 edge would be left
+                        self.graph.remove_edge(b, c)
+                        self.graph.add_edge(a, c)
+                        # current_coeff = nx.average_clustering(self.graph)
+                        if counter % 100 == 0:  # 100 is just an idea
+                            current_disp = disp(self.graph)
+
+                else:
+                    # b gets edge from a
+                    c = np.random.choice(neighbors_a)
+                    if (not c in neighbors_b) and len(neighbors_a) != 1:
+                        # only move an edge when no edge between new partners exist AND at least 1 edge would be left
+                        self.graph.remove_edge(a, c)
+                        self.graph.add_edge(b, c)
+                        # current_coeff = nx.average_clustering(self.graph)
+                        if counter % 100 == 0:  # 100 is just an idea
+                            current_disp = disp(self.graph)
+
+            counter += 1
+
+            # trying some bigger and smaller batch sizes
+            if counter == budget:
+                if stage == 0:
+                    print('Having difficulties reaching clustering target- changing skipping constant')
+                    check_skipping /= 4
+                    counter = 0
+                    stage += 1
+                    print('target:{}, val:{}'.format(target,current_disp))
+                    continue
+                elif stage == 1:
+                    print('Having difficulties reaching clustering target- changing skipping constant')
+                    check_skipping *= 16
+                    counter = 0
+                    stage += 1
+                    print('target:{}, val:{}'.format(target,current_disp))
+                    continue
+                elif stage == 2:
+                    print('Having difficulties reaching clustering target- changing skipping constant')
+                    check_skipping = check_skipping/4 *10
+                    counter = 0
+                    stage += 1
+                    print('target:{}, val:{}'.format(target,current_disp))
+                    continue
+                elif stage == 3:
+                    print('Having difficulties reaching clustering target- changing skipping constant')
+                    check_skipping = check_skipping/10/10
+                    counter = 0
+                    stage += 1
+                    print('target:{}, val:{}'.format(target,current_disp))
+                    continue
+
+
+        # print('failed:{}'.format(current_disp-target))
+        assert (counter != budget), "no success in changing clustering coefficient accordingly"
+
+        return current_disp
 
 
 if __name__ == '__main__':

@@ -16,9 +16,16 @@ import hashlib
 
 # pickling disabled for now, uncomment plot lines for that
 def simple_experiment(n, p, p_i, mc_iterations, max_t, mode=None, force_recompute=False, path=None,
-                      clustering: float = None, plot=False):
+                      clustering: float = None, dispersion=None):
     # this creates the net, runs monte carlo on it and saves the resulting timeseries plot, as well as pickles for net and counts
     # NOTE: SEED IS CONSTANT HERE!
+
+    assert not (dispersion and clustering), "Cannot set a dispersion target and " \
+                                          "a clustering target at the same time"
+    if dispersion:
+        chosen_epsilon = epsilon_disp
+    else:
+        chosen_epsilon = epsilon_clustering
 
     if path:
         dirname = path
@@ -34,7 +41,7 @@ def simple_experiment(n, p, p_i, mc_iterations, max_t, mode=None, force_recomput
 
     # the cache is now tagged with a hash from all important parameters instead of the above.
     # Any change to the model parameters will certainly trigger a recompute now
-    id_params = (n,p,p_i,mc_iterations,max_t,mode,clustering,t_i,t_c,t_r,t_d,t_t,p_q,p_t,quarantine_time,resolution,clustering_epsilon)
+    id_params = (n, p, p_i, mc_iterations, max_t, mode, clustering,dispersion, t_i, t_c, t_r, t_d, t_t, p_q, p_t, quarantine_time, resolution, chosen_epsilon)
     # normal hashes are salted between runs -> use something that is persistent
     tag = str(hashlib.md5(str(id_params).encode('utf8')).hexdigest())
 
@@ -42,7 +49,7 @@ def simple_experiment(n, p, p_i, mc_iterations, max_t, mode=None, force_recomput
     # disables loading pickled results
     if force_recompute:
         # if false, it looks at saved experiments and reuses those
-        net = Net(n=n, p=p, p_i=p_i, max_t=max_t, seed=123, clustering_target=clustering)
+        net = Net(n=n, p=p, p_i=p_i, max_t=max_t, seed=123, clustering_target=clustering,dispersion_target=dispersion)
         counts, sd = net.monte_carlo(mc_iterations, mode=mode)
         with open(os.path.join(dirname, tag + '_net.p'), 'wb') as f:
             pickle.dump(net, f)
@@ -63,7 +70,7 @@ def simple_experiment(n, p, p_i, mc_iterations, max_t, mode=None, force_recomput
             print('Experiment results have been loaded from history.')
 
         except FileNotFoundError:
-            net = Net(n=n, p=p, p_i=p_i, max_t=max_t, seed=123, clustering_target=clustering)
+            net = Net(n=n, p=p, p_i=p_i, max_t=max_t, seed=123, clustering_target=clustering, dispersion_target = dispersion)
 
             counts, sd = net.monte_carlo(mc_iterations, mode=mode)
             with open(os.path.join(dirname, tag + '_net.p'), 'wb') as f:
@@ -79,6 +86,10 @@ def simple_experiment(n, p, p_i, mc_iterations, max_t, mode=None, force_recomput
 
     # compute when the peak happens and what the ratio of infected is then
     t_peak = np.argmax(ep_curve, axis=0)
+    # if net.final_dispersion%10 >9:
+    #     net.plot_timeseries(counts)
+    #     plt.show()
+
     peak_height = ep_curve[t_peak] / n
 
     # compute the ratio of all exposed people at end of sim to the number of indiv.
@@ -110,7 +121,7 @@ def vary_p(res, n, p_i, mc_iterations, max_t, interval=(0, 1), mode=None, force_
 
     for i, p in enumerate(ps):
         net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence = \
-            simple_experiment(n, p, p_i, mc_iterations, max_t, mode, path=path, force_recompute=force_recompute)
+            simple_experiment(n, p, p_i, mc_iterations, max_t, mode, force_recompute=force_recompute, path=path)
 
         peak_times[i] = t_peak
         peak_heights[i] = peak_height
@@ -180,7 +191,7 @@ def vary_p_plot_cache(res, n, p_i, mc_iterations, max_t, interval=(0, 1), force_
     # all 3 modes
     for i, p in enumerate(ps):
         net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence = \
-            simple_experiment(n, p, p_i, mc_iterations, max_t, mode=None, path=path, force_recompute=force_recompute)
+            simple_experiment(n, p, p_i, mc_iterations, max_t, mode=None, force_recompute=force_recompute, path=path)
 
         peak_times[i] = t_peak
         peak_heights[i] = peak_height
@@ -188,7 +199,8 @@ def vary_p_plot_cache(res, n, p_i, mc_iterations, max_t, interval=(0, 1), force_
 
     for i, p in enumerate(ps):
         net_q, counts_q, sd_q, t_peak_q, peak_height_q, equilib_flag_q, period_prevalence_q = \
-            simple_experiment(n, p, p_i, mc_iterations, max_t, mode='quarantine', path=path, force_recompute=force_recompute)
+            simple_experiment(n, p, p_i, mc_iterations, max_t, mode='quarantine', force_recompute=force_recompute,
+                              path=path)
 
         peak_times_q[i] = t_peak_q
         peak_heights_q[i] = peak_height_q
@@ -196,7 +208,8 @@ def vary_p_plot_cache(res, n, p_i, mc_iterations, max_t, interval=(0, 1), force_
 
     for i, p in enumerate(ps):
         net_t, counts_t, sd_t, t_peak_t, peak_height_t, equilib_flag_t, period_prevalence_t = \
-            simple_experiment(n, p, p_i, mc_iterations, max_t, mode='tracing', path=path, force_recompute=force_recompute)
+            simple_experiment(n, p, p_i, mc_iterations, max_t, mode='tracing', force_recompute=force_recompute,
+                              path=path)
 
         peak_times_t[i] = t_peak_t
         peak_heights_t[i] = peak_height_t
@@ -260,7 +273,7 @@ def vary_p_i(res, n, p, mc_iterations, max_t, mode=None, force_recompute=False, 
 
     for i, p_inf in enumerate(p_is):
         net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence = \
-            simple_experiment(n, p, p_inf, mc_iterations, max_t, mode, path=path, force_recompute=force_recompute)
+            simple_experiment(n, p, p_inf, mc_iterations, max_t, mode, force_recompute=force_recompute, path=path)
         # TODO seed inside simple_experiment is constant, think about whether that's ok!
 
         peak_times[i] = t_peak
@@ -311,7 +324,7 @@ def vary_C(res, n, p, p_i, mc_iterations, max_t, interval=None, mode=None, force
     for i, C in enumerate(Cs):
         try:
             net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence = \
-                simple_experiment(n, p, p_i, mc_iterations, max_t, mode, path=path, force_recompute=force_recompute,
+                simple_experiment(n, p, p_i, mc_iterations, max_t, mode, force_recompute=force_recompute, path=path,
                                   clustering=C)
             peak_times[i] = t_peak
             peak_heights[i] = peak_height
@@ -333,7 +346,7 @@ def vary_C(res, n, p, p_i, mc_iterations, max_t, interval=None, mode=None, force
     dirname_parent = os.path.dirname(__file__)
     dirname = os.path.join(dirname_parent,'Experiments','Paper', 'Cache')
 
-    id_params = (n,p,p_i,mc_iterations,max_t,mode,interval,t_i,t_c,t_r,t_d,t_t,p_q,p_t,quarantine_time,resolution,clustering_epsilon)
+    id_params = (n, p, p_i, mc_iterations, max_t, mode, interval, t_i, t_c, t_r, t_d, t_t, p_q, p_t, quarantine_time, resolution, epsilon_disp,'disp')
     # normal hashes are salted between runs -> use something that is persistent
     tag = str(hashlib.md5(str(id_params).encode('utf8')).hexdigest())
 
@@ -391,6 +404,109 @@ def vary_C(res, n, p, p_i, mc_iterations, max_t, interval=None, mode=None, force
 
     return out # Cs, unsuccessful_flags, times, peaks, period_prev
 
+def vary_disp(res, n, p, p_i, mc_iterations, max_t, interval=None, mode=None, force_recompute=False, path=None):
+    # measure effect of clustering coeff on tracing effectiveness
+
+    if not interval:
+        # THEORY: the average clustering coeff of erdos renyi networks is p!
+        # so I test around that to see what changed
+        interval = (0.5*p,10*p)
+
+    # res parameter defines how many points on [0,1] are used
+    res = res - 1 # makes more sense to me because of linspace
+    peak_times = np.ndarray(res)
+    peak_heights = np.ndarray(res)
+    period_prevalences = np.ndarray(res)
+
+    Ds = np.linspace(interval[0], interval[1], endpoint=True, num=res)
+
+    unsuccessful_flag = []
+    for i, D in enumerate(Ds):
+        try:
+            net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence = \
+                simple_experiment(n, p, p_i, mc_iterations, max_t, mode, force_recompute=force_recompute, path=path,
+                                  dispersion=D)
+            peak_times[i] = t_peak
+            peak_heights[i] = peak_height
+            period_prevalences[i] = period_prevalence
+
+            print('last_disp{}, target_disp{}'.format(net.final_dispersion, D))
+
+
+            # Cs[i] = net.final_cluster_coeff # in the end I want to plot the actual coeff, not the target
+            # should specify this in the paper
+        except AssertionError:
+            print('Dispersion target not reached')
+
+            unsuccessful_flag.append(i)
+            peak_times[i] = np.nan
+            peak_heights[i] = np.nan
+            period_prevalences[i] = np.nan
+
+
+
+    dirname_parent = os.path.dirname(__file__)
+    dirname = os.path.join(dirname_parent,'Experiments','Paper', 'Cache')
+
+    id_params = (n, p, p_i, mc_iterations, max_t, mode, interval, t_i, t_c, t_r, t_d, t_t, p_q, p_t, quarantine_time, resolution, epsilon)
+    # normal hashes are salted between runs -> use something that is persistent
+    tag = str(hashlib.md5(str(id_params).encode('utf8')).hexdigest())
+
+    with open(os.path.join(dirname,tag+'_metrics.p'),'wb') as f:
+        out = [Ds, unsuccessful_flag,peak_times, peak_heights,period_prevalences]
+
+        pickle.dump(out, f)
+
+
+
+
+
+    fig, axes = plt.subplots(3, 1, sharex=True, figsize=(14, 14/16*9))
+
+    # fig.subplots_adjust(wspace = 0.5)
+    ax1, ax2, ax3 = axes
+
+    colordict = {'vanilla':'C0','quarantine':'C1','tracing':'C2'}
+
+    if mode:
+        ax1.set_title(mode)
+    else:
+        ax1.set_title('Vanilla')
+
+    ax1.plot(Ds, peak_times,colordict[mode])
+    ax1.set_ylabel('Peak time')
+
+    ax2.plot(Ds, peak_heights,colordict[mode])
+    ax2.set_ylabel('Peak prevalence')
+
+    ax3.plot(Ds, period_prevalences,colordict[mode])
+    ax3.set_ylabel('Fraction of affected')
+    ax3.set_xlabel('C(g)')
+    # labels = [interval[0],] + list(['' for i in range(len(ps)-2)]) + [interval[1],]
+    ax3.set_xticks(Ds[1:-1],minor=True)
+    ax3.set_xticks([interval[0],interval[1]])
+
+    # plt.tick_params(
+    #     axis='x',          # changes apply to the x-axis
+    #     which='minor',      # both major and minor ticks are affected
+    #     # bottom=False,      # ticks along the bottom edge are off
+    #     # top=False,         # ticks along the top edge are off
+    #     labelbottom=False) # labels along the bottom edge are off
+
+    # plt.xticks([interval[0],interval[1]])
+
+    if mode:
+        parent = os.path.dirname(path)
+        fig.savefig(os.path.join(parent,'Pics', 'dispvaried_n{}_p{}_{}'.format(
+            n,str(interval[0])+'to'+str(interval[1]), mode) + '.png'),bbox_inches = 'tight')
+    else:
+        parent = os.path.dirname(path)
+        fig.savefig(os.path.join(parent,'Pics', 'dispvaried_n{}_C{}'.format(
+            n,str(interval[0])+'to'+str(interval[1])) + '.png'),bbox_inches = 'tight')
+
+    return out # Cs, unsuccessful_flags, times, peaks, period_prev
+
+
 def vary_C_comp(res, n, p, p_i, mc_iterations, max_t, interval=None, force_recompute=False, path=None):
     # measure effect of clustering coeff on tracing effectiveness
 
@@ -410,8 +526,8 @@ def vary_C_comp(res, n, p, p_i, mc_iterations, max_t, interval=None, force_recom
     for i, C in enumerate(Cs):
         try:
             net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence = \
-                simple_experiment(n, p, p_i, mc_iterations, max_t, mode='vanilla', path=path, force_recompute=force_recompute,
-                                  clustering=C)
+                simple_experiment(n, p, p_i, mc_iterations, max_t, mode='vanilla', force_recompute=force_recompute,
+                                  path=path, clustering=C)
             peak_times_1[i] = t_peak
             peak_heights_1[i] = peak_height
             period_prevalences_1[i] = period_prevalence
@@ -433,8 +549,8 @@ def vary_C_comp(res, n, p, p_i, mc_iterations, max_t, interval=None, force_recom
     for i, C in enumerate(Cs):
         try:
             net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence = \
-                simple_experiment(n, p, p_i, mc_iterations, max_t, mode='quarantine', path=path, force_recompute=force_recompute,
-                                  clustering=C)
+                simple_experiment(n, p, p_i, mc_iterations, max_t, mode='quarantine', force_recompute=force_recompute,
+                                  path=path, clustering=C)
             peak_times_2[i] = t_peak
             peak_heights_2[i] = peak_height
             period_prevalences_2[i] = period_prevalence
@@ -457,8 +573,8 @@ def vary_C_comp(res, n, p, p_i, mc_iterations, max_t, interval=None, force_recom
     for i, C in enumerate(Cs):
         try:
             net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence = \
-                simple_experiment(n, p, p_i, mc_iterations, max_t, mode='tracing', path=path, force_recompute=force_recompute,
-                                  clustering=C)
+                simple_experiment(n, p, p_i, mc_iterations, max_t, mode='tracing', force_recompute=force_recompute,
+                                  path=path, clustering=C)
             peak_times_3[i] = t_peak
             peak_heights_3[i] = peak_height
             period_prevalences_3[i] = period_prevalence
@@ -480,7 +596,7 @@ def vary_C_comp(res, n, p, p_i, mc_iterations, max_t, interval=None, force_recom
     dirname_parent = os.path.dirname(__file__)
     dirname = os.path.join(dirname_parent,'Experiments','Paper', 'Cache')
 
-    id_params = (n,p,p_i,mc_iterations,max_t,interval,t_i,t_c,t_r,t_d,t_t,p_q,p_t,quarantine_time,resolution,clustering_epsilon)
+    id_params = (n, p, p_i, mc_iterations, max_t, interval, t_i, t_c, t_r, t_d, t_t, p_q, p_t, quarantine_time, resolution, epsilon)
     # normal hashes are salted between runs -> use something that is persistent
     tag = str(hashlib.md5(str(id_params).encode('utf8')).hexdigest())
 

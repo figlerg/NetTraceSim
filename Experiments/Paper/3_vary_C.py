@@ -24,6 +24,7 @@ p = 0.01
 p_i = 0.5
 mc_iterations = 100
 max_t = 200
+epsilon =0.1
 
 res = 10
 # interval = (0.008,0.03)
@@ -36,7 +37,7 @@ path = os.path.join(working_dir,'Cache')
 
 # the plots are created in cache folder
 a = time.time()
-Cs, unsuccessful_flag,peak_times, peak_heights,period_prevalences = vary_C(res,n,p,p_i,mc_iterations,max_t,interval,mode='quarantine',force_recompute=force_recompute,path=path)
+Cs, unsuccessful_flag,peak_times, peak_heights,period_prevalences = vary_C(res,n,p,p_i,mc_iterations,max_t,interval,mode='tracing',force_recompute=force_recompute,path=path)
 # Cs, unsuccessful_flags_1,peak_times_1, peak_heights_1,period_prevalences_1, \
 # Cs, unsuccessful_flags_2,peak_times_2, peak_heights_2,period_prevalences_2,\
 # Cs, unsuccessful_flags_3,peak_times_3, peak_heights_3,period_prevalences_3 = \

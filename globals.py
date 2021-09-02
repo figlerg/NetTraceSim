@@ -22,8 +22,9 @@ resolution = 1  # days for each animation frame, abtastrate (right now only ints
 
 redo_net = 5 # every i iterations, monte carlo also changes network
 
-clustering_epsilon = 0.3 # this is a relative epsilon (to p of network). 0.1 means within 10% of p
-
+# epsilon = 0
+epsilon_disp = 0.1 # this is a relative epsilon (to p of network). 0.1 means within 10% of p
+epsilon_clustering = 0.001
 
 INFECTION = 0
 INFECTIOUS = 1
