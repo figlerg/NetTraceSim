@@ -9,6 +9,8 @@ import numpy as np
 import random
 import os
 
+
+
 # testing different network params
 
 # exp_8_path = r"C:\Users\giglerf\Google Drive\Seminar_Networks\Experiments\corner_cases"
@@ -23,8 +25,8 @@ import os
 
 
 res = 20
-n = 10
-p = 0.5
+n = 1000
+p = 0.03
 p_i = 0.5
 mc_iterations = 100
 max_t = 200
@@ -34,14 +36,20 @@ path = working_dir.join(['Experiments',])
 
 
 
-net1, counts1,sd, t_peak1, peak_height1, equilib_flag1, durchseuchung1 = simple_experiment(n, p, p_i, mc_iterations,
+net1, counts1,sd, t_peak1, peak_height1, equilib_flag1, durchseuchung1,achieved_clustering, achieved_disp = simple_experiment(n, p, p_i, mc_iterations,
                                                                                            max_t, mode='tracing',
                                                                                            force_recompute=True,
-                                                                                           path=path, dispersion=1)
+                                                                                           path=path, clustering=0.15)
 
-net1.animate_last_sim()
+net2 = Net(n,p,p_i, max_t,seed=0, clustering_target=None, dispersion_target=None)
 
-print(net1.clustering())
+
+print('Clustering- altered:{}, normal:{}'.format(net1.clustering(), net2.clustering()))
+print('Dispersion- altered:{}, normal:{}'.format(net1.dispersion(), net2.dispersion()))
+
+# net1.animate_last_sim()
+
+# print(net1.clustering())
 
 net1.plot_timeseries(counts1, sd=sd)
 

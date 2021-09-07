@@ -14,6 +14,7 @@ from scipy.interpolate import interp1d
 import math
 from typing import List
 
+
 from globals import *  # loading some variables and constants
 from helpers import heap_delete, disp
 
@@ -62,8 +63,12 @@ class Net(object):
                                                             "a clustering target at the same time"
         if self.clustering_target:
             self.final_cluster_coeff = self.alter_clustering_coeff(clustering_target, epsilon_clustering)
+        else:
+            self.final_cluster_coeff = self.clustering()
         if self.dispersion_target:
             self.final_dispersion = self.alter_disp(dispersion_target, epsilon_disp)
+        else:
+            self.final_dispersion = disp(self.graph)
 
         # I don't want to deal with a whole mutable state list, so I only save the current count at regular intervals:
         self.count = np.zeros([4, 1], dtype=np.int32).flatten()  # current state
@@ -365,12 +370,16 @@ class Net(object):
         # net is input
         # run sim n times, saving the output in list
         results: List[np.ndarray] = []
+        net_cluster_coeffs: List[float] = []
+        net_disps : List[float] = []
         for i in range(n):
             redo = not bool((i + 1) % redo_net)  # redo_net is in globals.py, every i iterations net is changed as well
             self.reset(hard=redo)
-            if redo:
-                print(self.clustering())
+            # if redo:
+            #     print(self.clustering())
             results.append(self.sim(seed=i, mode=mode).copy())
+            net_cluster_coeffs.append(self.final_cluster_coeff)
+            net_disps.append(self.final_dispersion)
 
         # compute mean
         mean = np.zeros(results[0].shape)
@@ -385,7 +394,11 @@ class Net(object):
 
         sd = np.sqrt(variance)
 
-        return mean, sd
+
+        mean_clustering = np.mean(net_cluster_coeffs)
+        mean_disp = np.mean(net_disps)
+
+        return mean, sd, mean_clustering,mean_disp
 
     def reset(self, hard=False):
         # see note in __init__. Short: reset to original state (deepcopy), OR redo whole network
@@ -523,6 +536,9 @@ class Net(object):
 
     def clustering(self):
         return nx.average_clustering(self.graph)
+
+    def dispersion(self):
+        return disp(self.graph)
 
     def alter_clustering_coeff(self, target, epsilon):
         # to make less homogenous networks, this function redistributes edges until sufficiently close to goal
