@@ -596,7 +596,7 @@ def vary_C_comp(res, n, p, p_i, mc_iterations, max_t, interval=None, force_recom
     dirname_parent = os.path.dirname(__file__)
     dirname = os.path.join(dirname_parent,'Experiments','Paper', 'Cache')
 
-    id_params = (n, p, p_i, mc_iterations, max_t, interval, t_i, t_c, t_r, t_d, t_t, p_q, p_t, quarantine_time, resolution, epsilon)
+    id_params = (n, p, p_i, mc_iterations, max_t, interval, t_i, t_c, t_r, t_d, t_t, p_q, p_t, quarantine_time, resolution, epsilon_clustering)
     # normal hashes are salted between runs -> use something that is persistent
     tag = str(hashlib.md5(str(id_params).encode('utf8')).hexdigest())
 
@@ -647,6 +647,147 @@ def vary_C_comp(res, n, p, p_i, mc_iterations, max_t, interval=None, force_recom
 
     return out # Cs, unsuccessful_flags, times, peaks, period_prev
 
+def vary_C_comp_corrected(res, n, p, p_i, mc_iterations, max_t, interval=None, force_recompute=False, path=None):
+    # measure effect of clustering coeff on tracing effectiveness. Here we scale according to the vanilla outcome
+
+    if not interval:
+        # THEORY: the average clustering coeff of erdos renyi networks is p!
+        # so I test around that to see what changed
+        interval = (0.5*p,10*p)
+
+    # res parameter defines how many points on [0,1] are used
+    res = res - 1 # makes more sense to me because of linspace
+    Cs = np.linspace(interval[0], interval[1], endpoint=True, num=res)
+
+    # vanilla
+    peak_times_1 = np.ndarray(res)
+    peak_heights_1 = np.ndarray(res)
+    period_prevalences_1 = np.ndarray(res)
+    unsuccessful_flags_1 = []
+    for i, C in enumerate(Cs):
+        try:
+            net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence = \
+                simple_experiment(n, p, p_i, mc_iterations, max_t, mode='vanilla', force_recompute=force_recompute,
+                                  path=path, clustering=C)
+            peak_times_1[i] = t_peak
+            peak_heights_1[i] = peak_height
+            period_prevalences_1[i] = period_prevalence
+
+            # Cs[i] = net.final_cluster_coeff # in the end I want to plot the actual coeff, not the target
+            # should specify this in the paper
+        except AssertionError:
+            print('Clustering target not reached')
+
+            unsuccessful_flags_1.append(i)
+            peak_times_1[i] = np.nan
+            peak_heights_1[i] = np.nan
+            period_prevalences_1[i] = np.nan
+
+    # quarantine
+    peak_times_2 = np.ndarray(res)
+    peak_heights_2 = np.ndarray(res)
+    period_prevalences_2 = np.ndarray(res)
+    unsuccessful_flags_2 = []
+    for i, C in enumerate(Cs):
+        try:
+            net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence = \
+                simple_experiment(n, p, p_i, mc_iterations, max_t, mode='quarantine', force_recompute=force_recompute,
+                                  path=path, clustering=C)
+            peak_times_2[i] = t_peak
+            peak_heights_2[i] = peak_height / peak_heights_1[i]
+            period_prevalences_2[i] = period_prevalence / period_prevalences_1[i]
+
+            # Cs[i] = net.final_cluster_coeff # in the end I want to plot the actual coeff, not the target
+            # should specify this in the paper
+        except AssertionError:
+            print('Clustering target not reached')
+
+            unsuccessful_flags_2.append(i)
+            peak_times_2[i] = np.nan
+            peak_heights_2[i] = np.nan
+            period_prevalences_2[i] = np.nan
+
+    # tracing
+    peak_times_3 = np.ndarray(res)
+    peak_heights_3 = np.ndarray(res)
+    period_prevalences_3 = np.ndarray(res)
+    unsuccessful_flags_3 = []
+    for i, C in enumerate(Cs):
+        try:
+            net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence = \
+                simple_experiment(n, p, p_i, mc_iterations, max_t, mode='tracing', force_recompute=force_recompute,
+                                  path=path, clustering=C)
+            peak_times_3[i] = t_peak
+            peak_heights_3[i] = peak_height / peak_heights_1[i]
+            period_prevalences_3[i] = period_prevalence / period_prevalences_1[i]
+
+            # Cs[i] = net.final_cluster_coeff # in the end I want to plot the actual coeff, not the target
+            # should specify this in the paper
+        except AssertionError:
+            print('Clustering target not reached')
+
+            unsuccessful_flags_3.append(i)
+            peak_times_3[i] = np.nan
+            peak_heights_3[i] = np.nan
+            period_prevalences_3[i] = np.nan
+
+
+
+
+
+    dirname_parent = os.path.dirname(__file__)
+    dirname = os.path.join(dirname_parent,'Experiments','Paper', 'Cache')
+
+    id_params = (n, p, p_i, mc_iterations, max_t, interval, t_i, t_c, t_r, t_d, t_t, p_q, p_t, quarantine_time, resolution, epsilon_clustering)
+    # normal hashes are salted between runs -> use something that is persistent
+    tag = str(hashlib.md5(str(id_params).encode('utf8')).hexdigest())
+
+    with open(os.path.join(dirname,tag+'_metrics_corrected.p'),'wb') as f:
+        out = [Cs, unsuccessful_flags_1,peak_times_1, peak_heights_1,period_prevalences_1,
+               Cs, unsuccessful_flags_2,peak_times_2, peak_heights_2,period_prevalences_2,
+               Cs, unsuccessful_flags_3,peak_times_3, peak_heights_3,period_prevalences_3]
+
+        pickle.dump(out, f)
+
+
+
+
+
+    fig, axes = plt.subplots(2, 1, sharex=True, figsize=(14, 14/16*9))
+
+    # fig.subplots_adjust(wspace = 0.5)
+    ax2, ax3 = axes
+
+
+    # ax1.plot(Cs, peak_times_1,Cs, peak_times_2,Cs, peak_times_3)
+    # ax1.set_ylabel('Peak time')
+
+    ax2.plot(Cs, peak_heights_2,Cs, peak_heights_3)
+    ax2.set_ylabel('Scaled peak height')
+
+    ax3.plot(Cs, period_prevalences_2,Cs, period_prevalences_3)
+    ax3.set_ylabel('Scaled period prevalence')
+    ax3.set_xlabel('C(g)')
+    # labels = [interval[0],] + list(['' for i in range(len(ps)-2)]) + [interval[1],]
+    ax3.set_xticks(Cs[1:-1],minor=True)
+    ax3.set_xticks([interval[0],interval[1]])
+
+    # plt.tick_params(
+    #     axis='x',          # changes apply to the x-axis
+    #     which='minor',      # both major and minor ticks are affected
+    #     # bottom=False,      # ticks along the bottom edge are off
+    #     # top=False,         # ticks along the top edge are off
+    #     labelbottom=False) # labels along the bottom edge are off
+
+    # plt.xticks([interval[0],interval[1]])
+    plt.legend(['Quarantine', 'Tracing'])
+
+
+    parent = os.path.dirname(path)
+    fig.savefig(os.path.join(parent,'Pics', 'Cvaried_n{}_C{}_comp'.format(
+        n,str(interval[0])+'to'+str(interval[1])) + '.png'),bbox_inches = 'tight')
+
+    return out # Cs, unsuccessful_flags, times, peaks, period_prev
 
 if __name__ == '__main__':
     res = 20
