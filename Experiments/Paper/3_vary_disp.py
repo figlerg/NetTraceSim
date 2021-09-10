@@ -37,9 +37,10 @@ path = os.path.join(working_dir,'Cache')
 
 # the plots are created in cache folder
 a = time.time()
-Disps, unsuccessful_flag,peak_times, peak_heights,period_prevalences = vary_disp(
-    res,n,p,p_i,mc_iterations,max_t,interval,mode='tracing',
-    force_recompute=force_recompute,path=path)
+Disps, unsuccessful_flag,peak_times, peak_heights,period_prevalences = vary_disp(res, n, p, p_i, mc_iterations, max_t,
+                                                                                 interval, mode='tracing',
+                                                                                 force_recompute=force_recompute,
+                                                                                 path=path)
 
 
 

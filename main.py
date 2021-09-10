@@ -36,10 +36,8 @@ path = working_dir.join(['Experiments',])
 
 
 
-net1, counts1,sd, t_peak1, peak_height1, equilib_flag1, durchseuchung1,achieved_clustering, achieved_disp = simple_experiment(n, p, p_i, mc_iterations,
-                                                                                           max_t, mode='tracing',
-                                                                                           force_recompute=True,
-                                                                                           path=path, clustering=0.15)
+net1, counts1,sd, t_peak1, peak_height1, equilib_flag1, durchseuchung1,achieved_clustering, achieved_disp = simple_experiment(
+    n, p, p_i, mc_iterations, max_t, mode='tracing', force_recompute=False, path=path, clustering=0.15)
 
 net2 = Net(n,p,p_i, max_t,seed=0, clustering_target=None, dispersion_target=None)
 
