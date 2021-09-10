@@ -8,6 +8,8 @@ import networkx as nx
 import numpy as np
 import random
 import os
+from helpers import HiddenPrints
+
 
 # 3rd experiment:
 #   1) vary the clustering coefficient
@@ -37,10 +39,12 @@ path = os.path.join(working_dir,'Cache')
 
 # the plots are created in cache folder
 a = time.time()
-Disps, unsuccessful_flag,peak_times, peak_heights,period_prevalences = vary_disp(res, n, p, p_i, mc_iterations, max_t,
-                                                                                 interval, mode='tracing',
-                                                                                 force_recompute=force_recompute,
-                                                                                 path=path)
+
+with HiddenPrints():
+    Disps, unsuccessful_flag,peak_times, peak_heights,period_prevalences = vary_disp(res, n, p, p_i, mc_iterations, max_t,
+                                                                                     interval, mode='tracing',
+                                                                                     force_recompute=force_recompute,
+                                                                                     path=path)
 
 
 

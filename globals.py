@@ -47,3 +47,5 @@ inf2rec = np.asarray([0, 0, -1, 1], dtype=np.int32)
 inf2no_trans = np.asarray([0, 0, -1, 0], dtype=np.int32)
 # no_trans2rec = np.asarray([0, 0, 0, 1, -1], dtype=np.int32)
 # no_trans2inf = np.asarray([0, 0, 1, 0, -1], dtype=np.int32)
+
+

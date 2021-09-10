@@ -2,12 +2,16 @@ import hashlib
 import os
 import pickle
 
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
+import matplotlib as mpl
 
 from globals import *
 from net import Net
-
+from tqdm import tqdm
+import cycler
+from mpltools import color
 
 # pickling disabled for now, uncomment plot lines for that
 def simple_experiment(n, p, p_i, mc_iterations, max_t, seed=0, mode=None, force_recompute=False, path=None,
@@ -90,8 +94,6 @@ def vary_p(res, n, p_i, mc_iterations, max_t, interval=(0, 1), seed=0, mode=None
     # here I want to systematically check what varying the edge probability does. Should return something like a 1d heatmap?
     # return value should use one of the values t_peak, peak_height, equilib_flag, period_prevalence
 
-    # res parameter defines how many points on [0,1] are used
-    res = res - 1  # makes more sense to me because of linspace
     peak_times = np.ndarray(res)
     peak_heights = np.ndarray(res)
     period_prevalences = np.ndarray(res)
@@ -100,7 +102,8 @@ def vary_p(res, n, p_i, mc_iterations, max_t, interval=(0, 1), seed=0, mode=None
 
     for i, p in enumerate(ps):
         net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence, achieved_clustering, achieved_disp = \
-            simple_experiment(n, p, p_i, mc_iterations, max_t, seed=seed+i, mode=mode, force_recompute=force_recompute, path=path)
+            simple_experiment(n, p, p_i, mc_iterations, max_t, seed=seed + i, mode=mode,
+                              force_recompute=force_recompute, path=path)
 
         peak_times[i] = t_peak
         peak_heights[i] = peak_height
@@ -151,8 +154,6 @@ def vary_p_plot_cache(res, n, p_i, mc_iterations, max_t, interval=(0, 1), seed=0
     # utility function that loads all the pickles (or runs them first) and plots the three scenarios
     # is a modified copy of vary_p !
 
-    # res parameter defines how many points on [0,1] are used
-    res = res - 1  # makes more sense to me because of linspace
     peak_times = np.ndarray(res)
     peak_heights = np.ndarray(res)
     period_prevalences = np.ndarray(res)
@@ -166,26 +167,29 @@ def vary_p_plot_cache(res, n, p_i, mc_iterations, max_t, interval=(0, 1), seed=0
     ps = np.linspace(interval[0], interval[1], endpoint=True, num=res)
 
     # all 3 modes
-    for i, p in enumerate(ps):
+    for i, p in tqdm(enumerate(ps),total=res, desc='Vanilla'):
         net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence, achieved_clustering, achieved_disp = \
-            simple_experiment(n, p, p_i, mc_iterations, max_t,seed=seed + i + res, mode=None, force_recompute=force_recompute, path=path)
+            simple_experiment(n, p, p_i, mc_iterations, max_t, seed=seed + i + res, mode=None,
+                              force_recompute=force_recompute, path=path)
 
         peak_times[i] = t_peak
         peak_heights[i] = peak_height
         period_prevalences[i] = period_prevalence
 
-    for i, p in enumerate(ps):
+    for i, p in tqdm(enumerate(ps),total=res, desc='Quarantine'):
         net_q, counts_q, sd_q, t_peak_q, peak_height_q, equilib_flag_q, period_prevalence_q, achieved_clustering, achieved_disp = \
-            simple_experiment(n, p, p_i, mc_iterations, max_t,seed=seed + i + 2*res, mode='quarantine', force_recompute=force_recompute,
+            simple_experiment(n, p, p_i, mc_iterations, max_t, seed=seed + i + 2 * res, mode='quarantine',
+                              force_recompute=force_recompute,
                               path=path)
 
         peak_times_q[i] = t_peak_q
         peak_heights_q[i] = peak_height_q
         period_prevalences_q[i] = period_prevalence_q
 
-    for i, p in enumerate(ps):
+    for i, p in tqdm(enumerate(ps),total=res, desc='Tracing'):
         net_t, counts_t, sd_t, t_peak_t, peak_height_t, equilib_flag_t, period_prevalence_t, achieved_clustering, achieved_disp = \
-            simple_experiment(n, p, p_i, mc_iterations, max_t,seed=seed + i + 3*res, mode='tracing', force_recompute=force_recompute,
+            simple_experiment(n, p, p_i, mc_iterations, max_t, seed=seed + i + 3 * res, mode='tracing',
+                              force_recompute=force_recompute,
                               path=path)
 
         peak_times_t[i] = t_peak_t
@@ -223,14 +227,11 @@ def vary_p_plot_cache(res, n, p_i, mc_iterations, max_t, interval=(0, 1), seed=0
                 bbox_inches='tight')
 
 
-
 # this feels pretty uninteresting:
 def vary_p_i(res, n, p, mc_iterations, max_t, seed=0, mode=None, force_recompute=False, path=None):
     # here I want to systematically check what varying the edge probability does. Should return something like a 1d heatmap?
     # return value should use one of the values t_peak, peak_height, equilib_flag, period_prevalence
 
-    # res parameter defines how many points on [0,1] are used
-    res = res - 1  # silly, but for me it makes more sense to create n values for res = n (linspace creates n+1 with endpoint)
     peak_times = np.ndarray(res)
     peak_heights = np.ndarray(res)
     # flags = np.ndarray(res)
@@ -240,7 +241,8 @@ def vary_p_i(res, n, p, mc_iterations, max_t, seed=0, mode=None, force_recompute
 
     for i, p_inf in enumerate(p_is):
         net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence, achieved_clustering, achieved_disp = \
-            simple_experiment(n, p, p_inf, mc_iterations, max_t,seed=seed+i, mode=mode, force_recompute=force_recompute, path=path)
+            simple_experiment(n, p, p_inf, mc_iterations, max_t, seed=seed + i, mode=mode,
+                              force_recompute=force_recompute, path=path)
         # TODO seed inside simple_experiment is constant, think about whether that's ok!
 
         peak_times[i] = t_peak
@@ -279,8 +281,6 @@ def vary_C(res, n, p, p_i, mc_iterations, max_t, interval=None, seed=0, mode=Non
         # so I test around that to see what changed
         interval = (0.5 * p, 10 * p)
 
-    # res parameter defines how many points on [0,1] are used
-    res = res - 1  # makes more sense to me because of linspace
     peak_times = np.ndarray(res)
     peak_heights = np.ndarray(res)
     period_prevalences = np.ndarray(res)
@@ -288,10 +288,11 @@ def vary_C(res, n, p, p_i, mc_iterations, max_t, interval=None, seed=0, mode=Non
     Cs = np.linspace(interval[0], interval[1], endpoint=True, num=res)
 
     unsuccessful_flag = []
-    for i, C in enumerate(Cs):
+    for i, C in tqdm(enumerate(Cs), total=res):
         try:
             net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence, achieved_clustering, achieved_disp = \
-                simple_experiment(n, p, p_i, mc_iterations, max_t,seed=seed+i, mode=mode, force_recompute=force_recompute,
+                simple_experiment(n, p, p_i, mc_iterations, max_t, seed=seed + i, mode=mode,
+                                  force_recompute=force_recompute,
                                   path=path, clustering=C)
             peak_times[i] = t_peak
             peak_heights[i] = peak_height
@@ -311,7 +312,8 @@ def vary_C(res, n, p, p_i, mc_iterations, max_t, interval=None, seed=0, mode=Non
     dirname = os.path.join(dirname_parent, 'Experiments', 'Paper', 'Cache')
 
     id_params = (
-        n, p, p_i, mc_iterations, max_t, seed, mode, interval, t_i, t_c, t_r, t_d, t_t, p_q, p_t, quarantine_time, resolution,
+        n, p, p_i, mc_iterations, max_t, seed, mode, interval, t_i, t_c, t_r, t_d, t_t, p_q, p_t, quarantine_time,
+        resolution,
         epsilon_disp, 'disp')
     # normal hashes are salted between runs -> use something that is persistent
     tag = str(hashlib.md5(str(id_params).encode('utf8')).hexdigest())
@@ -375,8 +377,6 @@ def vary_disp(res, n, p, p_i, mc_iterations, max_t, interval=None, seed=0, mode=
         # so I test around that to see what changed
         interval = (0.5 * p, 10 * p)
 
-    # res parameter defines how many points on [0,1] are used
-    res = res - 1  # makes more sense to me because of linspace
     peak_times = np.ndarray(res)
     peak_heights = np.ndarray(res)
     period_prevalences = np.ndarray(res)
@@ -384,10 +384,11 @@ def vary_disp(res, n, p, p_i, mc_iterations, max_t, interval=None, seed=0, mode=
     Ds = np.linspace(interval[0], interval[1], endpoint=True, num=res)
 
     unsuccessful_flag = []
-    for i, D in enumerate(Ds):
+    for i, D in tqdm(enumerate(Ds),total=res, desc='Varying dispersion values'):
         try:
             net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence, achieved_clustering, achieved_disp = \
-                simple_experiment(n, p, p_i, mc_iterations, max_t,seed=seed+i, mode=mode, force_recompute=force_recompute,
+                simple_experiment(n, p, p_i, mc_iterations, max_t, seed=seed + i, mode=mode,
+                                  force_recompute=force_recompute,
                                   path=path, dispersion=D)
             peak_times[i] = t_peak
             peak_heights[i] = peak_height
@@ -409,7 +410,8 @@ def vary_disp(res, n, p, p_i, mc_iterations, max_t, interval=None, seed=0, mode=
     dirname = os.path.join(dirname_parent, 'Experiments', 'Paper', 'Cache')
 
     id_params = (
-        n, p, p_i, mc_iterations, max_t, mode,seed, interval, t_i, t_c, t_r, t_d, t_t, p_q, p_t, quarantine_time, resolution,
+        n, p, p_i, mc_iterations, max_t, mode, seed, interval, t_i, t_c, t_r, t_d, t_t, p_q, p_t, quarantine_time,
+        resolution,
         epsilon_disp)
     # normal hashes are salted between runs -> use something that is persistent
     tag = str(hashlib.md5(str(id_params).encode('utf8')).hexdigest())
@@ -473,18 +475,17 @@ def vary_C_comp(res, n, p, p_i, mc_iterations, max_t, interval=None, seed=0, for
         # so I test around that to see what changed
         interval = (0.5 * p, 10 * p)
 
-    # res parameter defines how many points on [0,1] are used
-    res = res - 1  # makes more sense to me because of linspace
     Cs = np.linspace(interval[0], interval[1], endpoint=True, num=res)
 
     peak_times_1 = np.ndarray(res)
     peak_heights_1 = np.ndarray(res)
     period_prevalences_1 = np.ndarray(res)
     unsuccessful_flags_1 = []
-    for i, C in enumerate(Cs):
+    for i, C in tqdm(enumerate(Cs), total=res,desc='Vanilla'):
         try:
             net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence, achieved_clustering, achieved_disp = \
-                simple_experiment(n, p, p_i, mc_iterations, max_t,seed=seed+i, mode='vanilla', force_recompute=force_recompute,
+                simple_experiment(n, p, p_i, mc_iterations, max_t, seed=seed + i, mode='vanilla',
+                                  force_recompute=force_recompute,
                                   path=path, clustering=C)
             peak_times_1[i] = t_peak
             peak_heights_1[i] = peak_height
@@ -504,10 +505,11 @@ def vary_C_comp(res, n, p, p_i, mc_iterations, max_t, interval=None, seed=0, for
     peak_heights_2 = np.ndarray(res)
     period_prevalences_2 = np.ndarray(res)
     unsuccessful_flags_2 = []
-    for i, C in enumerate(Cs):
+    for i, C in tqdm(enumerate(Cs), total=res,desc='Quarantine'):
         try:
             net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence, achieved_clustering, achieved_disp = \
-                simple_experiment(n, p, p_i, mc_iterations, max_t,seed=seed+i+res, mode='quarantine', force_recompute=force_recompute,
+                simple_experiment(n, p, p_i, mc_iterations, max_t, seed=seed + i + res, mode='quarantine',
+                                  force_recompute=force_recompute,
                                   path=path, clustering=C)
             peak_times_2[i] = t_peak
             peak_heights_2[i] = peak_height
@@ -527,10 +529,11 @@ def vary_C_comp(res, n, p, p_i, mc_iterations, max_t, interval=None, seed=0, for
     peak_heights_3 = np.ndarray(res)
     period_prevalences_3 = np.ndarray(res)
     unsuccessful_flags_3 = []
-    for i, C in enumerate(Cs):
+    for i, C in tqdm(enumerate(Cs), total=res, desc='Tracing'):
         try:
             net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence, achieved_clustering, achieved_disp = \
-                simple_experiment(n, p, p_i, mc_iterations, max_t,seed=seed+i+2*res, mode='tracing', force_recompute=force_recompute,
+                simple_experiment(n, p, p_i, mc_iterations, max_t, seed=seed + i + 2 * res, mode='tracing',
+                                  force_recompute=force_recompute,
                                   path=path, clustering=C)
             peak_times_3[i] = t_peak
             peak_heights_3[i] = peak_height
@@ -550,7 +553,7 @@ def vary_C_comp(res, n, p, p_i, mc_iterations, max_t, interval=None, seed=0, for
     dirname = os.path.join(dirname_parent, 'Experiments', 'Paper', 'Cache')
 
     id_params = (
-        n, p, p_i, mc_iterations, max_t, interval,seed, t_i, t_c, t_r, t_d, t_t, p_q, p_t, quarantine_time, resolution,
+        n, p, p_i, mc_iterations, max_t, interval, seed, t_i, t_c, t_r, t_d, t_t, p_q, p_t, quarantine_time, resolution,
         epsilon_clustering)
     # normal hashes are salted between runs -> use something that is persistent
     tag = str(hashlib.md5(str(id_params).encode('utf8')).hexdigest())
@@ -606,31 +609,30 @@ def vary_C_comp_corrected(res, n, p, p_i, mc_iterations, max_t, interval=None, s
         # so I test around that to see what changed
         interval = (0.5 * p, 10 * p)
 
-    # res parameter defines how many points on [0,1] are used
-    res = res - 1  # makes more sense to me because of linspace
     Cs = np.linspace(interval[0], interval[1], endpoint=True, num=res)
 
     # the following two variables save the actual values that were achieved by the heuristic.
     # In theory, these should be approximately the same in each net
-    achieved_clusterings = np.zeros((3,res))
-    achieved_disps = np.zeros((3,res))
+    achieved_clusterings = np.zeros((3, res))
+    achieved_disps = np.zeros((3, res))
 
     # vanilla
     peak_times_1 = np.ndarray(res)
     peak_heights_1 = np.ndarray(res)
     period_prevalences_1 = np.ndarray(res)
     unsuccessful_flags_1 = []
-    for i, C in enumerate(Cs):
+    for i, C in tqdm(enumerate(Cs), total=res,desc='Vanilla'):
         try:
             net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence, achieved_clustering, achieved_disp = \
-                simple_experiment(n, p, p_i, mc_iterations, max_t,seed=seed+i, mode='vanilla', force_recompute=force_recompute,
+                simple_experiment(n, p, p_i, mc_iterations, max_t, seed=seed + i, mode='vanilla',
+                                  force_recompute=force_recompute,
                                   path=path, clustering=C)
             peak_times_1[i] = t_peak
             peak_heights_1[i] = peak_height
             period_prevalences_1[i] = period_prevalence
 
-            achieved_clusterings[0,i] = achieved_clustering
-            achieved_disps[0,i] = achieved_disp
+            achieved_clusterings[0, i] = achieved_clustering
+            achieved_disps[0, i] = achieved_disp
 
             # Cs[i] = net.final_cluster_coeff # in the end I want to plot the actual coeff, not the target
             # should specify this in the paper
@@ -647,18 +649,18 @@ def vary_C_comp_corrected(res, n, p, p_i, mc_iterations, max_t, interval=None, s
     peak_heights_2 = np.ndarray(res)
     period_prevalences_2 = np.ndarray(res)
     unsuccessful_flags_2 = []
-    for i, C in enumerate(Cs):
+    for i, C in tqdm(enumerate(Cs), total=res,desc='Quarantine'):
         try:
             net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence, achieved_clustering, achieved_disp = \
-                simple_experiment(n, p, p_i, mc_iterations, max_t,seed=seed+i+res, mode='quarantine', force_recompute=force_recompute,
+                simple_experiment(n, p, p_i, mc_iterations, max_t, seed=seed + i + res, mode='quarantine',
+                                  force_recompute=force_recompute,
                                   path=path, clustering=C)
             peak_times_2[i] = t_peak
             peak_heights_2[i] = peak_height / peak_heights_1[i]
             period_prevalences_2[i] = period_prevalence / period_prevalences_1[i]
 
-            achieved_clusterings[1,i] = achieved_clustering
-            achieved_disps[1,i] = achieved_disp
-
+            achieved_clusterings[1, i] = achieved_clustering
+            achieved_disps[1, i] = achieved_disp
 
             # Cs[i] = net.final_cluster_coeff # in the end I want to plot the actual coeff, not the target
             # should specify this in the paper
@@ -675,10 +677,11 @@ def vary_C_comp_corrected(res, n, p, p_i, mc_iterations, max_t, interval=None, s
     peak_heights_3 = np.ndarray(res)
     period_prevalences_3 = np.ndarray(res)
     unsuccessful_flags_3 = []
-    for i, C in enumerate(Cs):
+    for i, C in tqdm(enumerate(Cs), total=res,desc='Tracing'):
         try:
             net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence, achieved_clustering, achieved_disp = \
-                simple_experiment(n, p, p_i, mc_iterations, max_t, seed=seed+i+2*res, mode='tracing', force_recompute=force_recompute,
+                simple_experiment(n, p, p_i, mc_iterations, max_t, seed=seed + i + 2 * res, mode='tracing',
+                                  force_recompute=force_recompute,
                                   path=path, clustering=C)
             peak_times_3[i] = t_peak
             peak_heights_3[i] = peak_height / peak_heights_1[i]
@@ -687,8 +690,8 @@ def vary_C_comp_corrected(res, n, p, p_i, mc_iterations, max_t, interval=None, s
             # Cs[i] = net.final_cluster_coeff # in the end I want to plot the actual coeff, not the target
             # should specify this in the paper
 
-            achieved_clusterings[2,i] = achieved_clustering
-            achieved_disps[2,i] = achieved_disp
+            achieved_clusterings[2, i] = achieved_clustering
+            achieved_disps[2, i] = achieved_disp
 
         except AssertionError:
             print('Clustering target not reached')
@@ -698,14 +701,11 @@ def vary_C_comp_corrected(res, n, p, p_i, mc_iterations, max_t, interval=None, s
             peak_heights_3[i] = np.nan
             period_prevalences_3[i] = np.nan
 
-
-
-
     dirname_parent = os.path.dirname(__file__)
     dirname = os.path.join(dirname_parent, 'Experiments', 'Paper', 'Cache')
 
     id_params = (
-        n, p, p_i, mc_iterations, max_t, interval,seed, t_i, t_c, t_r, t_d, t_t, p_q, p_t, quarantine_time, resolution,
+        n, p, p_i, mc_iterations, max_t, interval, seed, t_i, t_c, t_r, t_d, t_t, p_q, p_t, quarantine_time, resolution,
         epsilon_clustering)
     # normal hashes are salted between runs -> use something that is persistent
     tag = str(hashlib.md5(str(id_params).encode('utf8')).hexdigest())
@@ -729,12 +729,12 @@ def vary_C_comp_corrected(res, n, p, p_i, mc_iterations, max_t, interval=None, s
         # ax1.plot(Cs, peak_times_1,Cs, peak_times_2,Cs, peak_times_3)
         # ax1.set_ylabel('Peak time')
 
-        ax2.plot(Cs, peak_heights_2,'C1')
-        ax2.plot(Cs, peak_heights_3,'C2')
+        ax2.plot(Cs, peak_heights_2, 'C1')
+        ax2.plot(Cs, peak_heights_3, 'C2')
         ax2.set_ylabel('Scaled peak height')
 
-        ax3.plot(Cs, period_prevalences_2,'C1')
-        ax3.plot(Cs, period_prevalences_3,'C2')
+        ax3.plot(Cs, period_prevalences_2, 'C1')
+        ax3.plot(Cs, period_prevalences_3, 'C2')
         ax3.set_ylabel('Scaled period prevalence')
         ax3.set_xlabel('C(g)')
         # labels = [interval[0],] + list(['' for i in range(len(ps)-2)]) + [interval[1],]
@@ -758,7 +758,6 @@ def vary_C_comp_corrected(res, n, p, p_i, mc_iterations, max_t, interval=None, s
         # ax_upper_axis.xaxis.set_major_formatter(FormatStrFormatter('%.3f'))
         ax_upper_axis.set_xlabel('D(g)')
 
-
         # plt.xticks([interval[0],interval[1]])
         ax3.legend(['Quarantine', 'Tracing'])
 
@@ -774,16 +773,16 @@ def vary_C_comp_corrected(res, n, p, p_i, mc_iterations, max_t, interval=None, s
         # ax1.plot(Cs, peak_times_1,Cs, peak_times_2,Cs, peak_times_3)
         # ax1.set_ylabel('Peak time')
 
-        ax2.plot(Cs, peak_heights_3,'C2')
+        ax2.plot(Cs, peak_heights_3, 'C2')
         ax2.set_ylabel('Scaled peak height')
 
-        ax3.plot(Cs, period_prevalences_3,'C2')
+        ax3.plot(Cs, period_prevalences_3, 'C2')
         ax3.set_ylabel('Scaled period prevalence')
         ax3.set_xlabel('C(g)')
         ax3.set_xticks(Cs, minor=False)
         ax3.xaxis.set_major_formatter(FormatStrFormatter('%.3f'))
 
-    # ax3.set_xticks(Cs[1:-1], minor=True)
+        # ax3.set_xticks(Cs[1:-1], minor=True)
         # ax3.set_xticks([interval[0], interval[1]])
         # ax3.set_xticks(Cs, minor=True)
 
@@ -796,11 +795,135 @@ def vary_C_comp_corrected(res, n, p, p_i, mc_iterations, max_t, interval=None, s
         ax_upper_axis.set_xlabel('D(g)')
 
         # plt.legend(['Quarantine', 'Tracing'])
-        ax3.legend(['Tracing',])
+        ax3.legend(['Tracing', ])
 
         parent = os.path.dirname(path)
         fig.savefig(os.path.join(parent, 'Pics', 'Cvaried_n{}_C{}_comp_corrected_tracing'.format(
             n, str(interval[0]) + 'to' + str(interval[1])) + '.png'), bbox_inches='tight')
+
+    return out
+
+
+def vary_C_comp_epcurves(res, n, p, p_i, mc_iterations, max_t, interval, seed=0, force_recompute=False,
+                         path=None):
+    # measure effect of clustering coeff on tracing effectiveness. Here we scale according to the vanilla outcome
+
+    # res parameter defines how many points on [0,1] are used
+    Cs = np.linspace(interval[0], interval[1], endpoint=True, num=res)
+
+    # the following two variables save the actual values that were achieved by the heuristic.
+    # In theory, these should be approximately the same in each net
+    achieved_clusterings = np.zeros((3, res))
+    achieved_disps = np.zeros((3, res))
+
+    # set up the plots
+    fig, axes = plt.subplots(1, 4, figsize=(14, 14 / 16 * 9),gridspec_kw={'width_ratios': [5,5,5,0.3]})
+
+    ax1, ax2, ax3, cbar_ax = axes
+
+    ax1.set_ylabel('Infected')
+    ax2.set_ylabel('Infected')
+    ax3.set_ylabel('Infected')
+    ax1.set_xlabel('t')
+    ax2.set_xlabel('t')
+    ax3.set_xlabel('t')
+
+
+    # cbar_ax.axis('off')
+
+    norm = matplotlib.colors.Normalize(vmin=Cs[0], vmax=Cs[-1], clip=False)
+    cmap = plt.cm.jet
+    cb1 = mpl.colorbar.ColorbarBase(cbar_ax, cmap=cmap, norm=norm, orientation='vertical')
+    cbar_ax.set_ylabel('C(g)')
+
+    # set up colorcycles
+    # color = plt.cm.viridis(Cs)
+    # norm = mpl.colors.Normalize(vmin=Cs[0], vmax=Cs[-1])
+    # fig.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=color), ax=ax1)
+    # fig.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=color), ax=ax2)
+    # fig.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=color), ax=ax3)
+    # color.cycle_cmap(res)
+    # mpl.rcParams['axes.prop_cycle'] = cycler.cycler('color', color)
+
+    # ax3.legend(list(['C = '+ str(C) for C in Cs]))
+
+    # vanilla
+    peak_times_1 = np.ndarray(res)
+    peak_heights_1 = np.ndarray(res)
+    period_prevalences_1 = np.ndarray(res)
+    unsuccessful_flags_1 = []
+    for i, C in tqdm(enumerate(Cs),desc='Vanilla',total=res):
+        net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence, achieved_clustering, achieved_disp = \
+            simple_experiment(n, p, p_i, mc_iterations, max_t, seed=seed + i, mode='vanilla',
+                              force_recompute=force_recompute,
+                              path=path, clustering=C)
+        peak_times_1[i] = t_peak
+        peak_heights_1[i] = peak_height
+        period_prevalences_1[i] = period_prevalence
+        achieved_clusterings[0, i] = achieved_clustering
+        achieved_disps[0, i] = achieved_disp
+
+        # epidemiological curve
+        ax1.plot(counts[2, :],color=cmap(norm(C)))
+
+    # quarantine
+    peak_times_2 = np.ndarray(res)
+    peak_heights_2 = np.ndarray(res)
+    period_prevalences_2 = np.ndarray(res)
+    unsuccessful_flags_2 = []
+    for i, C in tqdm(enumerate(Cs),desc='Quarantine',total=res):
+        net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence, achieved_clustering, achieved_disp = \
+            simple_experiment(n, p, p_i, mc_iterations, max_t, seed=seed + i + res, mode='quarantine',
+                              force_recompute=force_recompute,
+                              path=path, clustering=C)
+        peak_times_2[i] = t_peak
+        peak_heights_2[i] = peak_height / peak_heights_1[i]
+        period_prevalences_2[i] = period_prevalence / period_prevalences_1[i]
+        achieved_clusterings[1, i] = achieved_clustering
+        achieved_disps[1, i] = achieved_disp
+
+        # epidemiological curve
+        ax2.plot(counts[2, :],color=cmap(norm(C)))
+
+    # tracing
+    peak_times_3 = np.ndarray(res)
+    peak_heights_3 = np.ndarray(res)
+    period_prevalences_3 = np.ndarray(res)
+    unsuccessful_flags_3 = []
+    for i, C in tqdm(enumerate(Cs), desc='Tracing', total=res):
+        net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence, achieved_clustering, achieved_disp = \
+            simple_experiment(n, p, p_i, mc_iterations, max_t, seed=seed + i + 2 * res, mode='tracing',
+                              force_recompute=force_recompute,
+                              path=path, clustering=C)
+        peak_times_3[i] = t_peak
+        peak_heights_3[i] = peak_height / peak_heights_1[i]
+        period_prevalences_3[i] = period_prevalence / period_prevalences_1[i]
+        achieved_clusterings[2, i] = achieved_clustering
+        achieved_disps[2, i] = achieved_disp
+
+        # epidemiological curve
+        ax3.plot(counts[2, :],color=cmap(norm(C)))
+
+    parent = os.path.dirname(path)
+    dirname_parent = os.path.dirname(__file__)
+    dirname = os.path.join(dirname_parent, 'Experiments', 'Paper', 'Cache')
+
+    id_params = (
+        n, p, p_i, mc_iterations, max_t, interval, seed, t_i, t_c, t_r, t_d, t_t, p_q, p_t, quarantine_time, resolution,
+        epsilon_clustering)
+    # normal hashes are salted between runs -> use something that is persistent
+    tag = str(hashlib.md5(str(id_params).encode('utf8')).hexdigest())
+
+    with open(os.path.join(dirname, tag + '_metrics_corrected.p'), 'wb') as f:
+        out = [Cs, unsuccessful_flags_1, peak_times_1, peak_heights_1, period_prevalences_1,
+               Cs, unsuccessful_flags_2, peak_times_2, peak_heights_2, period_prevalences_2,
+               Cs, unsuccessful_flags_3, peak_times_3, peak_heights_3, period_prevalences_3,
+               achieved_clusterings, achieved_disps]
+
+        pickle.dump(out, f)
+
+    fig.savefig(os.path.join(parent, 'Pics', 'Cvaried_n{}_C{}_comp_epcurves'.format(
+        n, str(interval[0]) + 'to' + str(interval[1])) + '.png'), bbox_inches='tight')
 
     return out
 

@@ -8,14 +8,14 @@ import numpy as np
 import pandas as pd
 import random
 import os
-
+from helpers import HiddenPrints
+import argparse
 # 1st experiment:
 #   1) set up a base case
 #   2) simply create monte carlo time series that show the epidemic curves
 #   3) compare between the three models
 
 
-import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--recompute', action='store_true', default=False)

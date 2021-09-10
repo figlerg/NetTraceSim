@@ -8,6 +8,7 @@ from do_experiment import simple_experiment
 import networkx as nx
 import numpy as np
 import os
+from helpers import HiddenPrints
 
 
 res = 20

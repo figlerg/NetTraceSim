@@ -4,6 +4,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.integrate import solve_ivp
+from helpers import HiddenPrints
 
 # plt.style.use('seaborn-poster')
 from do_experiment import simple_experiment

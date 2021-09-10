@@ -7,6 +7,7 @@ import networkx as nx
 import numpy as np
 import random
 import os
+from helpers import HiddenPrints
 
 # 2nd experiment:
 #   1) see the effects of varying the connectivity of the network
@@ -36,6 +37,6 @@ path = os.path.join(working_dir,'Cache')
 # vary_p(res, n, p_i, mc_iterations, max_t,interval=interval, mode=None, force_recompute=force_recompute, path=path)
 # vary_p(res, n, p_i, mc_iterations, max_t,interval=interval, mode='quarantine', force_recompute=force_recompute, path=path)
 # vary_p(res, n, p_i, mc_iterations, max_t,interval=interval, mode='tracing', force_recompute=force_recompute, path=path)
-
-vary_p_plot_cache(res, n, p_i, mc_iterations, max_t, interval=interval, force_recompute=force_recompute, path=path)
+with HiddenPrints():
+    vary_p_plot_cache(res, n, p_i, mc_iterations, max_t, interval=interval, force_recompute=force_recompute, path=path)
 
