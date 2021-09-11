@@ -1,4 +1,6 @@
+import concurrent.futures
 import hashlib
+import multiprocessing
 import os
 import pickle
 
@@ -6,12 +8,13 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 import matplotlib as mpl
-
 from globals import *
 from net import Net
 from tqdm import tqdm
 import cycler
 from mpltools import color
+from multiprocessing import Pool
+from concurrent.futures import ProcessPoolExecutor
 
 # pickling disabled for now, uncomment plot lines for that
 def simple_experiment(n, p, p_i, mc_iterations, max_t, seed=0, mode=None, force_recompute=False, path=None,
@@ -227,52 +230,6 @@ def vary_p_plot_cache(res, n, p_i, mc_iterations, max_t, interval=(0, 1), seed=0
                 bbox_inches='tight')
 
 
-# this feels pretty uninteresting:
-def vary_p_i(res, n, p, mc_iterations, max_t, seed=0, mode=None, force_recompute=False, path=None):
-    # here I want to systematically check what varying the edge probability does. Should return something like a 1d heatmap?
-    # return value should use one of the values t_peak, peak_height, equilib_flag, period_prevalence
-
-    peak_times = np.ndarray(res)
-    peak_heights = np.ndarray(res)
-    # flags = np.ndarray(res)
-    period_prevalences = np.ndarray(res)
-
-    p_is = np.linspace(0, 1, endpoint=True, num=res)
-
-    for i, p_inf in enumerate(p_is):
-        net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence, achieved_clustering, achieved_disp = \
-            simple_experiment(n, p, p_inf, mc_iterations, max_t, seed=seed + i, mode=mode,
-                              force_recompute=force_recompute, path=path)
-        # TODO seed inside simple_experiment is constant, think about whether that's ok!
-
-        peak_times[i] = t_peak
-        peak_heights[i] = peak_height
-        period_prevalences[i] = period_prevalence
-
-    fig, axes = plt.subplots(3, 1, sharex=True, figsize=(16 * 1.5, 9 * 1.5))
-    # fig.subplots_adjust(wspace = 0.5)
-    ax1, ax2, ax3 = axes
-
-    ax1.plot(p_is, peak_times)
-    # ax1.set_xlabel('p')
-    ax1.set_ylabel('peak-times')
-
-    ax2.plot(p_is, peak_heights)
-    # ax2.set_xlabel('p')
-    ax2.set_ylabel('peak-height')
-
-    ax3.plot(p_is, period_prevalences)
-    # ax3.set_xlabel('p')
-    ax3.set_ylabel('percentage of affected')
-    ax3.set_xlabel('infection probability')
-    ax3.set_xticks(p_is)
-    # plt.show()
-    if mode:
-        fig.savefig(os.path.join(path, 'pivaried_n{}_p{}_{}'.format(n, p, mode) + '.png'))
-    else:
-        fig.savefig(os.path.join(path, 'pivaried_n{}_p{}'.format(n, p) + '.png'))
-
-
 def vary_C(res, n, p, p_i, mc_iterations, max_t, interval=None, seed=0, mode=None, force_recompute=False, path=None):
     # measure effect of clustering coeff on tracing effectiveness
 
@@ -364,104 +321,6 @@ def vary_C(res, n, p, p_i, mc_iterations, max_t, interval=None, seed=0, mode=Non
     else:
         parent = os.path.dirname(path)
         fig.savefig(os.path.join(parent, 'Pics', 'Cvaried_n{}_C{}'.format(
-            n, str(interval[0]) + 'to' + str(interval[1])) + '.png'), bbox_inches='tight')
-
-    return out  # Cs, unsuccessful_flags, times, peaks, period_prev
-
-
-def vary_disp(res, n, p, p_i, mc_iterations, max_t, interval=None, seed=0, mode=None, force_recompute=False, path=None):
-    # measure effect of clustering coeff on tracing effectiveness
-
-    if not interval:
-        # THEORY: the average clustering coeff of erdos renyi networks is p!
-        # so I test around that to see what changed
-        interval = (0.5 * p, 10 * p)
-
-    peak_times = np.ndarray(res)
-    peak_heights = np.ndarray(res)
-    period_prevalences = np.ndarray(res)
-
-    Ds = np.linspace(interval[0], interval[1], endpoint=True, num=res)
-
-    unsuccessful_flag = []
-    for i, D in tqdm(enumerate(Ds),total=res, desc='Varying dispersion values'):
-        try:
-            net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence, achieved_clustering, achieved_disp = \
-                simple_experiment(n, p, p_i, mc_iterations, max_t, seed=seed + i, mode=mode,
-                                  force_recompute=force_recompute,
-                                  path=path, dispersion=D)
-            peak_times[i] = t_peak
-            peak_heights[i] = peak_height
-            period_prevalences[i] = period_prevalence
-
-            print('last_disp{}, target_disp{}'.format(net.final_dispersion, D))
-
-            # Cs[i] = net.final_cluster_coeff # in the end I want to plot the actual coeff, not the target
-            # should specify this in the paper
-        except AssertionError:
-            print('Dispersion target not reached')
-
-            unsuccessful_flag.append(i)
-            peak_times[i] = np.nan
-            peak_heights[i] = np.nan
-            period_prevalences[i] = np.nan
-
-    dirname_parent = os.path.dirname(__file__)
-    dirname = os.path.join(dirname_parent, 'Experiments', 'Paper', 'Cache')
-
-    id_params = (
-        n, p, p_i, mc_iterations, max_t, mode, seed, interval, t_i, t_c, t_r, t_d, t_t, p_q, p_t, quarantine_time,
-        resolution,
-        epsilon_disp)
-    # normal hashes are salted between runs -> use something that is persistent
-    tag = str(hashlib.md5(str(id_params).encode('utf8')).hexdigest())
-
-    with open(os.path.join(dirname, tag + '_metrics.p'), 'wb') as f:
-        out = [Ds, unsuccessful_flag, peak_times, peak_heights, period_prevalences]
-
-        pickle.dump(out, f)
-
-    fig, axes = plt.subplots(3, 1, sharex=True, figsize=(14, 14 / 16 * 9))
-
-    # fig.subplots_adjust(wspace = 0.5)
-    ax1, ax2, ax3 = axes
-
-    colordict = {'vanilla': 'C0', 'quarantine': 'C1', 'tracing': 'C2'}
-
-    if mode:
-        ax1.set_title(mode)
-    else:
-        ax1.set_title('Vanilla')
-
-    ax1.plot(Ds, peak_times, colordict[mode])
-    ax1.set_ylabel('Peak time')
-
-    ax2.plot(Ds, peak_heights, colordict[mode])
-    ax2.set_ylabel('Peak prevalence')
-
-    ax3.plot(Ds, period_prevalences, colordict[mode])
-    ax3.set_ylabel('Fraction of affected')
-    ax3.set_xlabel('C(g)')
-    # labels = [interval[0],] + list(['' for i in range(len(ps)-2)]) + [interval[1],]
-    ax3.set_xticks(Ds[1:-1], minor=True)
-    ax3.set_xticks([interval[0], interval[1]])
-
-    # plt.tick_params(
-    #     axis='x',          # changes apply to the x-axis
-    #     which='minor',      # both major and minor ticks are affected
-    #     # bottom=False,      # ticks along the bottom edge are off
-    #     # top=False,         # ticks along the top edge are off
-    #     labelbottom=False) # labels along the bottom edge are off
-
-    # plt.xticks([interval[0],interval[1]])
-
-    if mode:
-        parent = os.path.dirname(path)
-        fig.savefig(os.path.join(parent, 'Pics', 'dispvaried_n{}_p{}_{}'.format(
-            n, str(interval[0]) + 'to' + str(interval[1]), mode) + '.png'), bbox_inches='tight')
-    else:
-        parent = os.path.dirname(path)
-        fig.savefig(os.path.join(parent, 'Pics', 'dispvaried_n{}_C{}'.format(
             n, str(interval[0]) + 'to' + str(interval[1])) + '.png'), bbox_inches='tight')
 
     return out  # Cs, unsuccessful_flags, times, peaks, period_prev
@@ -616,90 +475,118 @@ def vary_C_comp_corrected(res, n, p, p_i, mc_iterations, max_t, interval=None, s
     achieved_clusterings = np.zeros((3, res))
     achieved_disps = np.zeros((3, res))
 
+
+
     # vanilla
     peak_times_1 = np.ndarray(res)
     peak_heights_1 = np.ndarray(res)
     period_prevalences_1 = np.ndarray(res)
     unsuccessful_flags_1 = []
-    for i, C in tqdm(enumerate(Cs), total=res,desc='Vanilla'):
-        try:
-            net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence, achieved_clustering, achieved_disp = \
-                simple_experiment(n, p, p_i, mc_iterations, max_t, seed=seed + i, mode='vanilla',
-                                  force_recompute=force_recompute,
-                                  path=path, clustering=C)
-            peak_times_1[i] = t_peak
-            peak_heights_1[i] = peak_height
-            period_prevalences_1[i] = period_prevalence
-
-            achieved_clusterings[0, i] = achieved_clustering
-            achieved_disps[0, i] = achieved_disp
-
-            # Cs[i] = net.final_cluster_coeff # in the end I want to plot the actual coeff, not the target
-            # should specify this in the paper
-        except AssertionError:
-            print('Clustering target not reached')
-
-            unsuccessful_flags_1.append(i)
-            peak_times_1[i] = np.nan
-            peak_heights_1[i] = np.nan
-            period_prevalences_1[i] = np.nan
 
     # quarantine
     peak_times_2 = np.ndarray(res)
     peak_heights_2 = np.ndarray(res)
     period_prevalences_2 = np.ndarray(res)
     unsuccessful_flags_2 = []
-    for i, C in tqdm(enumerate(Cs), total=res,desc='Quarantine'):
-        try:
-            net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence, achieved_clustering, achieved_disp = \
-                simple_experiment(n, p, p_i, mc_iterations, max_t, seed=seed + i + res, mode='quarantine',
-                                  force_recompute=force_recompute,
-                                  path=path, clustering=C)
-            peak_times_2[i] = t_peak
-            peak_heights_2[i] = peak_height / peak_heights_1[i]
-            period_prevalences_2[i] = period_prevalence / period_prevalences_1[i]
-
-            achieved_clusterings[1, i] = achieved_clustering
-            achieved_disps[1, i] = achieved_disp
-
-            # Cs[i] = net.final_cluster_coeff # in the end I want to plot the actual coeff, not the target
-            # should specify this in the paper
-        except AssertionError:
-            print('Clustering target not reached')
-
-            unsuccessful_flags_2.append(i)
-            peak_times_2[i] = np.nan
-            peak_heights_2[i] = np.nan
-            period_prevalences_2[i] = np.nan
 
     # tracing
     peak_times_3 = np.ndarray(res)
     peak_heights_3 = np.ndarray(res)
     period_prevalences_3 = np.ndarray(res)
     unsuccessful_flags_3 = []
+
+    if __name__ == '__main__':
+
+        # DO THE VANILLA COMPUTATIONS IN PARALLEL
+        pool = multiprocessing.Pool()
+        # Settings specifically for this mode:
+        mode = 'vanilla'
+        seed_shift = 0 # this makes sure that all seeds are different between runs
+        peak_times = peak_times_1
+        peak_heights = peak_heights_1
+        period_prevalences = period_prevalences_1
+
+        # create the inputs as a list of arg tuples
+        arg_list = list([(i, C, n, p, p_i, mc_iterations, max_t, seed+i+seed_shift*res, mode, force_recompute, path,
+                          peak_times, peak_heights, period_prevalences, achieved_clusterings, achieved_disps)
+                         for i, C in enumerate(Cs)])
+
+        # use map to assign the different settings to seperate workers/cores
+        pool.map(_do_experiment, tqdm(arg_list,total=res, desc='Vanilla (Parallel)'))
+        pool.close()
+        pool.join()
+
+        # DO THE QUARANTINE COMPUTATIONS IN PARALLEL
+        pool = multiprocessing.Pool()
+        # Settings specifically for this mode:
+        mode = 'quarantine'
+        seed_shift = 1 # this makes sure that all seeds are different between runs
+        peak_times = peak_times_2
+        peak_heights = peak_heights_2
+        period_prevalences = period_prevalences_2
+
+        # create the inputs as a list of arg tuples
+        arg_list = list([(i, C, n, p, p_i, mc_iterations, max_t, seed+i+seed_shift*res, mode, force_recompute, path,
+                          peak_times, peak_heights, period_prevalences, achieved_clusterings, achieved_disps)
+                         for i, C in enumerate(Cs)])
+
+        # use map to assign the different settings to seperate workers/cores
+        pool.map(_do_experiment, tqdm(arg_list,total=res, desc='Quarantine (Parallel)'))
+        pool.close()
+        pool.join()
+
+        # DO THE TRACING COMPUTATIONS IN PARALLEL
+        pool = multiprocessing.Pool()
+        # Settings specifically for this mode:
+        mode = 'tracing'
+        seed_shift = 2 # this makes sure that all seeds are different between runs
+        peak_times = peak_times_3
+        peak_heights = peak_heights_3
+        period_prevalences = period_prevalences_3
+
+        # create the inputs as a list of arg tuples
+        arg_list = list([(i, C, n, p, p_i, mc_iterations, max_t, seed+i+seed_shift*res, mode, force_recompute, path,
+                          peak_times, peak_heights, period_prevalences, achieved_clusterings, achieved_disps)
+                         for i, C in enumerate(Cs)])
+
+        # use map to assign the different settings to seperate workers/cores
+        pool.map(_do_experiment, tqdm(arg_list,total=res, desc='Tracing (Parallel)'))
+        pool.close()
+        pool.join()
+
+
+
+
+
+    for i, C in tqdm(enumerate(Cs), total=res,desc='Quarantine'):
+        net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence, achieved_clustering, achieved_disp = \
+            simple_experiment(n, p, p_i, mc_iterations, max_t, seed=seed + i + res, mode='quarantine',
+                              force_recompute=force_recompute,
+                              path=path, clustering=C)
+        peak_times_2[i] = t_peak
+        peak_heights_2[i] = peak_height / peak_heights_1[i]
+        period_prevalences_2[i] = period_prevalence / period_prevalences_1[i]
+
+        achieved_clusterings[1, i] = achieved_clustering
+        achieved_disps[1, i] = achieved_disp
+
+
+
     for i, C in tqdm(enumerate(Cs), total=res,desc='Tracing'):
-        try:
-            net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence, achieved_clustering, achieved_disp = \
-                simple_experiment(n, p, p_i, 2*mc_iterations, max_t, seed=seed + i + 2 * res, mode='tracing',
-                                  force_recompute=force_recompute,
-                                  path=path, clustering=C)
-            peak_times_3[i] = t_peak
-            peak_heights_3[i] = peak_height / peak_heights_1[i]
-            period_prevalences_3[i] = period_prevalence / period_prevalences_1[i]
+        net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence, achieved_clustering, achieved_disp = \
+            simple_experiment(n, p, p_i, 2*mc_iterations, max_t, seed=seed + i + 2 * res, mode='tracing',
+                              force_recompute=force_recompute,
+                              path=path, clustering=C)
+        peak_times_3[i] = t_peak
+        peak_heights_3[i] = peak_height / peak_heights_1[i]
+        period_prevalences_3[i] = period_prevalence / period_prevalences_1[i]
 
-            # Cs[i] = net.final_cluster_coeff # in the end I want to plot the actual coeff, not the target
-            # should specify this in the paper
+        # Cs[i] = net.final_cluster_coeff # in the end I want to plot the actual coeff, not the target
+        # should specify this in the paper
 
-            achieved_clusterings[2, i] = achieved_clustering
-            achieved_disps[2, i] = achieved_disp
+        achieved_clusterings[2, i] = achieved_clustering
+        achieved_disps[2, i] = achieved_disp
 
-        except AssertionError:
-            print('Clustering target not reached')
-
-            unsuccessful_flags_3.append(i)
-            peak_times_3[i] = np.nan
-            peak_heights_3[i] = np.nan
-            period_prevalences_3[i] = np.nan
 
     dirname_parent = os.path.dirname(__file__)
     dirname = os.path.join(dirname_parent, 'Experiments', 'Paper', 'Cache')
@@ -928,25 +815,43 @@ def vary_C_comp_epcurves(res, n, p, p_i, mc_iterations, max_t, interval, seed=0,
     return out
 
 
+# need to write this as function so it works with multprocessing. Needs to be global for the pickling to work.
+# It is basically just a small wrapper layer for simple_experiment that changes the metrics in place
+def _do_experiment(args):
+    i, C, n, p, p_i, mc_iterations, max_t, seed, mode, force_recompute, path, \
+        peak_times, peak_heights, period_prevalences, achieved_clusterings, achieved_disps = args
+
+    net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence, achieved_clustering, achieved_disp = \
+        simple_experiment(n, p, p_i, mc_iterations, max_t, seed=seed + i, mode=mode,
+                          force_recompute=force_recompute,
+                          path=path, clustering=C)
+    peak_times[i] = t_peak
+    peak_heights[i] = peak_height
+    period_prevalences[i] = period_prevalence
+
+    achieved_clusterings[0, i] = achieved_clustering
+    achieved_disps[0, i] = achieved_disp
+
 if __name__ == '__main__':
-    res = 20
-    n = 500
-    p = 0.1
-    p_i = 0.5
-    mc_iterations = 50
-    max_t = 200
-    path = r'C:\Users\giglerf\Google Drive\Seminar_Networks\Experiments\vary_params'
-
-    vary_p(res=res, n=n, p_i=p_i, mc_iterations=mc_iterations, max_t=max_t, force_recompute=False, path=path)
-    vary_p(res=res, n=n, p_i=p_i, mc_iterations=mc_iterations, max_t=max_t, mode='quarantine', force_recompute=False,
-           path=path)
-    vary_p(res=res, n=n, p_i=p_i, mc_iterations=mc_iterations, max_t=max_t, mode='tracing', force_recompute=False,
-           path=path)
-
-    vary_p_i(res=res, n=n, p=p, mc_iterations=mc_iterations, max_t=max_t, force_recompute=False, path=path)
-    vary_p_i(res=res, n=n, p=p, mc_iterations=mc_iterations, max_t=max_t, mode='quarantine', force_recompute=False,
-             path=path)
-    vary_p_i(res=res, n=n, p=p, mc_iterations=mc_iterations, max_t=max_t, mode='tracing', force_recompute=False,
-             path=path)
-
-    # vary_p(res=3,n=100,p_i=0.5, mc_iterations=1, max_t=20 path = r'C:\Users\giglerf\Google Drive\Seminar_Networks\Experiments\vary_params')
+    pass
+    # res = 20
+    # n = 500
+    # p = 0.1
+    # p_i = 0.5
+    # mc_iterations = 50
+    # max_t = 200
+    # path = r'C:\Users\giglerf\Google Drive\Seminar_Networks\Experiments\vary_params'
+    #
+    # vary_p(res=res, n=n, p_i=p_i, mc_iterations=mc_iterations, max_t=max_t, force_recompute=False, path=path)
+    # vary_p(res=res, n=n, p_i=p_i, mc_iterations=mc_iterations, max_t=max_t, mode='quarantine', force_recompute=False,
+    #        path=path)
+    # vary_p(res=res, n=n, p_i=p_i, mc_iterations=mc_iterations, max_t=max_t, mode='tracing', force_recompute=False,
+    #        path=path)
+    #
+    # vary_p_i(res=res, n=n, p=p, mc_iterations=mc_iterations, max_t=max_t, force_recompute=False, path=path)
+    # vary_p_i(res=res, n=n, p=p, mc_iterations=mc_iterations, max_t=max_t, mode='quarantine', force_recompute=False,
+    #          path=path)
+    # vary_p_i(res=res, n=n, p=p, mc_iterations=mc_iterations, max_t=max_t, mode='tracing', force_recompute=False,
+    #          path=path)
+    #
+    # # vary_p(res=3,n=100,p_i=0.5, mc_iterations=1, max_t=20 path = r'C:\Users\giglerf\Google Drive\Seminar_Networks\Experiments\vary_params')

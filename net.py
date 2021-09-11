@@ -372,6 +372,9 @@ class Net(object):
         results: List[np.ndarray] = []
         net_cluster_coeffs: List[float] = []
         net_disps : List[float] = []
+
+
+
         for i in range(n):
             redo = not bool((i + 1) % redo_net)  # redo_net is in globals.py, every i iterations net is changed as well
             self.reset(hard=redo)
