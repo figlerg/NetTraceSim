@@ -11,7 +11,6 @@ from globals import *
 from net import Net
 from tqdm import tqdm
 import cycler
-from mpltools import color
 
 # pickling disabled for now, uncomment plot lines for that
 def simple_experiment(n, p, p_i, mc_iterations, max_t, seed=0, mode=None, force_recompute=False, path=None,
