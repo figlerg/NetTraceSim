@@ -680,7 +680,7 @@ def vary_C_comp_corrected(res, n, p, p_i, mc_iterations, max_t, interval=None, s
     for i, C in tqdm(enumerate(Cs), total=res,desc='Tracing'):
         try:
             net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence, achieved_clustering, achieved_disp = \
-                simple_experiment(n, p, p_i, mc_iterations, max_t, seed=seed + i + 2 * res, mode='tracing',
+                simple_experiment(n, p, p_i, 2*mc_iterations, max_t, seed=seed + i + 2 * res, mode='tracing',
                                   force_recompute=force_recompute,
                                   path=path, clustering=C)
             peak_times_3[i] = t_peak
@@ -719,7 +719,7 @@ def vary_C_comp_corrected(res, n, p, p_i, mc_iterations, max_t, interval=None, s
         pickle.dump(out, f)
 
     # two modes for visualization
-    show_both = False
+    show_both = True
     if show_both:
         fig, axes = plt.subplots(2, 1, sharex=True, figsize=(14, 14 / 16 * 9))
 
@@ -892,7 +892,7 @@ def vary_C_comp_epcurves(res, n, p, p_i, mc_iterations, max_t, interval, seed=0,
     unsuccessful_flags_3 = []
     for i, C in tqdm(enumerate(Cs), desc='Tracing', total=res):
         net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence, achieved_clustering, achieved_disp = \
-            simple_experiment(n, p, p_i, mc_iterations, max_t, seed=seed + i + 2 * res, mode='tracing',
+            simple_experiment(n, p, p_i, 2*mc_iterations, max_t, seed=seed + i + 2 * res, mode='tracing',
                               force_recompute=force_recompute,
                               path=path, clustering=C)
         peak_times_3[i] = t_peak

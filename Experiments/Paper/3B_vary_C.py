@@ -24,7 +24,7 @@ p = 0.01
 p_i = 0.5
 # mc_iterations = 100
 mc_iterations = 400
-max_t = 200
+max_t = 400
 
 # res = 10
 res = 20
