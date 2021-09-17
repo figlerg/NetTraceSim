@@ -12,8 +12,9 @@ from net import Net
 from tqdm import tqdm
 import cycler
 
+
 # pickling disabled for now, uncomment plot lines for that
-def simple_experiment(n, p, p_i, mc_iterations, max_t, seed=0, mode=None, force_recompute=False, path=None,
+def simple_experiment_old(n, p, p_i, mc_iterations, max_t, seed=0, mode=None, force_recompute=False, path=None,
                       clustering: float = None, dispersion=None):
     # this creates the net, runs monte carlo on it and saves the resulting timeseries plot, as well as pickles for net and counts
 
@@ -87,6 +88,8 @@ def simple_experiment(n, p, p_i, mc_iterations, max_t, seed=0, mode=None, force_
 
     period_prevalence = virus_contacts[-1] / n
     return net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence, achieved_clustering, achieved_disp
+
+from do_experiment_parallel import simple_experiment # this is the new, parallel version of the above function. By Martin!
 
 
 def vary_p(res, n, p_i, mc_iterations, max_t, interval=(0, 1), seed=0, mode=None, force_recompute=False, path=None):
@@ -621,27 +624,22 @@ def vary_C_comp_corrected(res, n, p, p_i, mc_iterations, max_t, interval=None, s
     period_prevalences_1 = np.ndarray(res)
     unsuccessful_flags_1 = []
     for i, C in tqdm(enumerate(Cs), total=res,desc='Vanilla'):
-        try:
-            net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence, achieved_clustering, achieved_disp = \
-                simple_experiment(n, p, p_i, mc_iterations, max_t, seed=seed + i, mode='vanilla',
-                                  force_recompute=force_recompute,
-                                  path=path, clustering=C)
-            peak_times_1[i] = t_peak
-            peak_heights_1[i] = peak_height
-            period_prevalences_1[i] = period_prevalence
+        net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence, achieved_clustering, achieved_disp = \
+            simple_experiment(n, p, p_i, mc_iterations, max_t, seed=seed + i, mode='vanilla',
+                              force_recompute=force_recompute,
+                              path=path, clustering=C)
 
-            achieved_clusterings[0, i] = achieved_clustering
-            achieved_disps[0, i] = achieved_disp
+        assert equilib_flag, 'Sim not complete?'
 
-            # Cs[i] = net.final_cluster_coeff # in the end I want to plot the actual coeff, not the target
-            # should specify this in the paper
-        except AssertionError:
-            print('Clustering target not reached')
+        peak_times_1[i] = t_peak
+        peak_heights_1[i] = peak_height
+        period_prevalences_1[i] = period_prevalence
 
-            unsuccessful_flags_1.append(i)
-            peak_times_1[i] = np.nan
-            peak_heights_1[i] = np.nan
-            period_prevalences_1[i] = np.nan
+        achieved_clusterings[0, i] = achieved_clustering
+        achieved_disps[0, i] = achieved_disp
+
+        # Cs[i] = net.final_cluster_coeff # in the end I want to plot the actual coeff, not the target
+        # should specify this in the paper
 
     # quarantine
     peak_times_2 = np.ndarray(res)
@@ -649,27 +647,22 @@ def vary_C_comp_corrected(res, n, p, p_i, mc_iterations, max_t, interval=None, s
     period_prevalences_2 = np.ndarray(res)
     unsuccessful_flags_2 = []
     for i, C in tqdm(enumerate(Cs), total=res,desc='Quarantine'):
-        try:
-            net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence, achieved_clustering, achieved_disp = \
-                simple_experiment(n, p, p_i, mc_iterations, max_t, seed=seed + i + res, mode='quarantine',
-                                  force_recompute=force_recompute,
-                                  path=path, clustering=C)
-            peak_times_2[i] = t_peak
-            peak_heights_2[i] = peak_height / peak_heights_1[i]
-            period_prevalences_2[i] = period_prevalence / period_prevalences_1[i]
+        net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence, achieved_clustering, achieved_disp = \
+            simple_experiment(n, p, p_i, mc_iterations, max_t, seed=seed + i + res, mode='quarantine',
+                              force_recompute=force_recompute,
+                              path=path, clustering=C)
 
-            achieved_clusterings[1, i] = achieved_clustering
-            achieved_disps[1, i] = achieved_disp
+        assert equilib_flag, 'Sim not complete?'
 
-            # Cs[i] = net.final_cluster_coeff # in the end I want to plot the actual coeff, not the target
-            # should specify this in the paper
-        except AssertionError:
-            print('Clustering target not reached')
+        peak_times_2[i] = t_peak
+        peak_heights_2[i] = peak_height / peak_heights_1[i]
+        period_prevalences_2[i] = period_prevalence / period_prevalences_1[i]
 
-            unsuccessful_flags_2.append(i)
-            peak_times_2[i] = np.nan
-            peak_heights_2[i] = np.nan
-            period_prevalences_2[i] = np.nan
+        achieved_clusterings[1, i] = achieved_clustering
+        achieved_disps[1, i] = achieved_disp
+
+        # Cs[i] = net.final_cluster_coeff # in the end I want to plot the actual coeff, not the target
+        # should specify this in the paper
 
     # tracing
     peak_times_3 = np.ndarray(res)
@@ -677,28 +670,22 @@ def vary_C_comp_corrected(res, n, p, p_i, mc_iterations, max_t, interval=None, s
     period_prevalences_3 = np.ndarray(res)
     unsuccessful_flags_3 = []
     for i, C in tqdm(enumerate(Cs), total=res,desc='Tracing'):
-        try:
-            net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence, achieved_clustering, achieved_disp = \
-                simple_experiment(n, p, p_i, 2*mc_iterations, max_t, seed=seed + i + 2 * res, mode='tracing',
-                                  force_recompute=force_recompute,
-                                  path=path, clustering=C)
-            peak_times_3[i] = t_peak
-            peak_heights_3[i] = peak_height / peak_heights_1[i]
-            period_prevalences_3[i] = period_prevalence / period_prevalences_1[i]
+        net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence, achieved_clustering, achieved_disp = \
+            simple_experiment(n, p, p_i, 2*mc_iterations, max_t, seed=seed + i + 2 * res, mode='tracing',
+                              force_recompute=force_recompute,
+                              path=path, clustering=C)
 
-            # Cs[i] = net.final_cluster_coeff # in the end I want to plot the actual coeff, not the target
-            # should specify this in the paper
+        assert equilib_flag, 'Sim not complete?'
 
-            achieved_clusterings[2, i] = achieved_clustering
-            achieved_disps[2, i] = achieved_disp
+        peak_times_3[i] = t_peak
+        peak_heights_3[i] = peak_height / peak_heights_1[i]
+        period_prevalences_3[i] = period_prevalence / period_prevalences_1[i]
 
-        except AssertionError:
-            print('Clustering target not reached')
+        # Cs[i] = net.final_cluster_coeff # in the end I want to plot the actual coeff, not the target
+        # should specify this in the paper
 
-            unsuccessful_flags_3.append(i)
-            peak_times_3[i] = np.nan
-            peak_heights_3[i] = np.nan
-            period_prevalences_3[i] = np.nan
+        achieved_clusterings[2, i] = achieved_clustering
+        achieved_disps[2, i] = achieved_disp
 
     dirname_parent = os.path.dirname(__file__)
     dirname = os.path.join(dirname_parent, 'Experiments', 'Paper', 'Cache')
@@ -718,7 +705,7 @@ def vary_C_comp_corrected(res, n, p, p_i, mc_iterations, max_t, interval=None, s
         pickle.dump(out, f)
 
     # two modes for visualization
-    show_both = True
+    show_both = False
     if show_both:
         fig, axes = plt.subplots(2, 1, sharex=True, figsize=(14, 14 / 16 * 9))
 

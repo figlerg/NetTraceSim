@@ -23,11 +23,11 @@ n = 500
 p = 0.01
 p_i = 0.5
 # mc_iterations = 100
-mc_iterations = 400
+mc_iterations = 800
 max_t = 400
 
 # res = 10
-res = 20
+res = 30
 # interval = (0.008,0.03)
 # interval = (p,0.075)
 interval = (p,6*p)
@@ -39,12 +39,14 @@ path = os.path.join(working_dir,'Cache')
 
 # the plots are created in cache folder
 a = time.time()
-with HiddenPrints():
-    # Cs, unsuccessful_flag,peak_times, peak_heights,period_prevalences = vary_C(res,n,p,p_i,mc_iterations,max_t,interval,mode='tracing',force_recompute=force_recompute,path=path)
-    Cs, unsuccessful_flags_1,peak_times_1, peak_heights_1,period_prevalences_1, \
-    Cs, unsuccessful_flags_2,peak_times_2, peak_heights_2,period_prevalences_2,\
-    Cs, unsuccessful_flags_3,peak_times_3, peak_heights_3,period_prevalences_3, achieved_C, achieved_D = \
-        vary_C_comp_corrected(res, n, p, p_i, mc_iterations, max_t, interval,seed=0, force_recompute=force_recompute, path=path)
+
+if __name__ == '__main__':
+    with HiddenPrints():
+        # Cs, unsuccessful_flag,peak_times, peak_heights,period_prevalences = vary_C(res,n,p,p_i,mc_iterations,max_t,interval,mode='tracing',force_recompute=force_recompute,path=path)
+        Cs, unsuccessful_flags_1,peak_times_1, peak_heights_1,period_prevalences_1, \
+        Cs, unsuccessful_flags_2,peak_times_2, peak_heights_2,period_prevalences_2,\
+        Cs, unsuccessful_flags_3,peak_times_3, peak_heights_3,period_prevalences_3, achieved_C, achieved_D = \
+            vary_C_comp_corrected(res, n, p, p_i, mc_iterations, max_t, interval,seed=0, force_recompute=force_recompute, path=path)
 
 
 
@@ -65,6 +67,6 @@ b = time.time()
 
 
 # print([Cs, unsuccessful_flag,peak_times, peak_heights,period_prevalences])
-print('Time:{} seconds'.format(b-a))
+# print('Time:{} seconds'.format(b-a))
 
 

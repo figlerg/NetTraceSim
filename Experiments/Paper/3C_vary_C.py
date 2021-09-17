@@ -72,6 +72,6 @@ b = time.time()
 
 
 # print([Cs, unsuccessful_flag,peak_times, peak_heights,period_prevalences])
-print('Time:{} seconds'.format(b-a))
+# print('Time:{} seconds'.format(b-a))
 
 
