@@ -23,11 +23,11 @@ n = 500
 p = 0.01
 p_i = 0.5
 # mc_iterations = 100
-mc_iterations = 800
+mc_iterations = 200
 max_t = 400
 
 # res = 10
-res = 30
+res = 10
 # interval = (0.008,0.03)
 # interval = (p,0.075)
 interval = (p,6*p)

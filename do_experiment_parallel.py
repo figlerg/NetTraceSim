@@ -32,8 +32,8 @@ class MCProcess(Process):
 
     def run(self):
         with HiddenPrints():
-            [mean,sd,clustering, disp] = Net(n=self.n, p=self.p, p_i=self.p_i, max_t=self.max_t, seed=self.seed, clustering_target=self.clustering_target,dispersion_target=self.dispersion_target).monte_carlo(self.mc_iterations, mode=self.mode)
-            self.queue[self.name]=[mean,sd,clustering,disp]
+            [mean,sd,clustering, dispersion] = Net(n=self.n, p=self.p, p_i=self.p_i, max_t=self.max_t, seed=self.seed, clustering_target=self.clustering_target,dispersion_target=self.dispersion_target).monte_carlo(self.mc_iterations, mode=self.mode)
+            self.queue[self.name]=[mean,sd,clustering,dispersion]
         return
 
 # pickling disabled for now, uncomment plot lines for that
