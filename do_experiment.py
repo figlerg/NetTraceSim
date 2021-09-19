@@ -12,6 +12,16 @@ from net import Net
 from tqdm import tqdm
 import cycler
 
+#Direct input
+plt.rcParams['text.latex.preamble'] = r"\usepackage{bm} \usepackage{amsmath}"
+# plt.rcParams['text.latex.preamble']=[r"\usepackage{lmodern}"]
+#Options
+params = {'text.usetex' : True,
+          'font.size' : 11,
+          'font.family' : 'lmodern',
+          }
+plt.rcParams.update(params)
+
 
 # pickling disabled for now, uncomment plot lines for that
 def simple_experiment_old(n, p, p_i, mc_iterations, max_t, seed=0, mode=None, force_recompute=False, path=None,
@@ -638,8 +648,6 @@ def vary_C_comp_corrected(res, n, p, p_i, mc_iterations, max_t, interval=None, s
         achieved_clusterings[0, i] = achieved_clustering
         achieved_disps[0, i] = achieved_disp
 
-        # Cs[i] = net.final_cluster_coeff # in the end I want to plot the actual coeff, not the target
-        # should specify this in the paper
 
     # quarantine
     peak_times_2 = np.ndarray(res)
@@ -681,8 +689,6 @@ def vary_C_comp_corrected(res, n, p, p_i, mc_iterations, max_t, interval=None, s
         peak_heights_3[i] = peak_height / peak_heights_1[i]
         period_prevalences_3[i] = period_prevalence / period_prevalences_1[i]
 
-        # Cs[i] = net.final_cluster_coeff # in the end I want to plot the actual coeff, not the target
-        # should specify this in the paper
 
         achieved_clusterings[2, i] = achieved_clustering
         achieved_disps[2, i] = achieved_disp
@@ -789,6 +795,187 @@ def vary_C_comp_corrected(res, n, p, p_i, mc_iterations, max_t, interval=None, s
 
     return out
 
+def vary_C_pi_comp_corrected(res, n, p, p_is:tuple, mc_iterations, max_t, interval=None, seed=0, force_recompute=False,
+                             path=None):
+    # measure effect of clustering coeff on tracing effectiveness. Here we scale according to the vanilla outcome
+    # Several values for infectvity p_i are used
+
+    assert len(p_is) <= 3, 'Only three values for p_i should be selected for visibility'
+
+    Cs = np.linspace(interval[0], interval[1], endpoint=True, num=res)
+    n_p_i = len(p_is)
+
+    # the following two variables save the actual values that were achieved by the heuristic.
+    # In theory, these should be approximately the same in each net
+    achieved_clusterings = np.zeros((3*n_p_i, res))
+    achieved_disps = np.zeros((3*n_p_i, res))
+
+    # vanilla
+    peak_times_1 = np.ndarray((res,n_p_i))
+    peak_heights_1 = np.ndarray((res,n_p_i))
+    period_prevalences_1 = np.ndarray((res,n_p_i))
+    for i, C in tqdm(enumerate(Cs), total=res,desc='Vanilla'):
+        for j, p_inf in enumerate(p_is):
+            net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence, achieved_clustering, achieved_disp = \
+                simple_experiment(n, p, p_inf, mc_iterations, max_t, seed=j*156484+ seed + i, mode='vanilla',
+                                  force_recompute=force_recompute,
+                                  path=path, clustering=C)
+
+            assert equilib_flag, 'Sim not complete?'
+
+            peak_times_1[i,j] = t_peak
+            peak_heights_1[i,j] = peak_height
+            period_prevalences_1[i,j] = period_prevalence
+
+            achieved_clusterings[j, i] = achieved_clustering
+            achieved_disps[j, i] = achieved_disp
+
+
+    # quarantine
+    peak_times_2 = np.ndarray((res,n_p_i))
+    peak_heights_2 = np.ndarray((res,n_p_i))
+    period_prevalences_2 = np.ndarray((res,n_p_i))
+    for i, C in tqdm(enumerate(Cs), total=res,desc='Quarantine'):
+        for j, p_inf in enumerate(p_is):
+            net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence, achieved_clustering, achieved_disp = \
+                simple_experiment(n, p, p_inf, mc_iterations, max_t, seed=j*84265+seed + i + res, mode='quarantine',
+                                  force_recompute=force_recompute,
+                                  path=path, clustering=C)
+
+            assert equilib_flag, 'Sim not complete?'
+
+            peak_times_2[i,j] = t_peak
+            peak_heights_2[i,j] = peak_height / peak_heights_1[i,j]
+            period_prevalences_2[i,j] = period_prevalence / period_prevalences_1[i,j]
+
+            achieved_clusterings[n_p_i+j, i] = achieved_clustering
+            achieved_disps[n_p_i+j, i] = achieved_disp
+
+
+    # tracing
+    peak_times_3 = np.ndarray((res,n_p_i))
+    peak_heights_3 = np.ndarray((res,n_p_i))
+    period_prevalences_3 = np.ndarray((res,n_p_i))
+    for i, C in tqdm(enumerate(Cs), total=res,desc='Tracing'):
+        for j, p_inf in enumerate(p_is):
+            net, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence, achieved_clustering, achieved_disp = \
+                simple_experiment(n, p, p_inf, mc_iterations, max_t, seed=j*543513+seed + i + 2 * res, mode='tracing',
+                                  force_recompute=force_recompute,
+                                  path=path, clustering=C)
+
+            assert equilib_flag, 'Sim not complete?'
+
+            peak_times_3[i,j] = t_peak
+            peak_heights_3[i,j] = peak_height / peak_heights_1[i,j]
+            period_prevalences_3[i,j] = period_prevalence / period_prevalences_1[i,j]
+
+
+            achieved_clusterings[2*n_p_i+j, i] = achieved_clustering
+            achieved_disps[2*n_p_i+j, i] = achieved_disp
+
+    dirname_parent = os.path.dirname(__file__)
+    dirname = os.path.join(dirname_parent, 'Experiments', 'Paper', 'Cache')
+
+    id_params = (
+        n, p, p_is, mc_iterations, max_t, interval, seed, t_i, t_c, t_r, t_d, t_t, p_q, p_t, quarantine_time, resolution,
+        epsilon_clustering)
+    # normal hashes are salted between runs -> use something that is persistent
+    tag = str(hashlib.md5(str(id_params).encode('utf8')).hexdigest())
+
+    with open(os.path.join(dirname, tag + '_metrics_corrected.p'), 'wb') as f:
+        out = [Cs, peak_times_1, peak_heights_1, period_prevalences_1,
+               peak_times_2, peak_heights_2, period_prevalences_2,
+               peak_times_3, peak_heights_3, period_prevalences_3,
+               achieved_clusterings, achieved_disps]
+
+        pickle.dump(out, f)
+
+    # two modes for visualization
+    scale = 1
+    fig, axes = plt.subplots(2, 2, figsize=(scale*8, scale*6), dpi=1200)
+
+    # fig.subplots_adjust(wspace = 0.5)
+    (axul, axur), (axll, axlr) = axes # upper left, upper right, lower left, lower right
+
+
+    axul.set_ylabel('Scaled peak height')
+    axll.set_ylabel('Scaled period prevalence')
+    axll.set_xlabel('C(g)')
+    axlr.set_xlabel('C(g)')
+
+    # axll.set_xticks(Cs, minor=False)
+    # axll.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+    # axlr.set_xticks(Cs, minor=False)
+    # axlr.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+
+    axul.set_title('Quarantine')
+    axur.set_title('Tracing')
+
+
+    axul.set_prop_cycle(color=['orange','orange','orange',],linestyle=['-','--',':'])
+    axll.set_prop_cycle(color=['orange','orange','orange',],linestyle=['-','--',':'])
+    axur.set_prop_cycle(color=['green','green','green',],linestyle=['-','--',':'])
+    axlr.set_prop_cycle(color=['green','green','green',],linestyle=['-','--',':'])
+
+
+    axul.plot(Cs, peak_heights_2)
+    axur.plot(Cs, peak_heights_3)
+
+    axll.plot(Cs, period_prevalences_2)
+    axll.legend(['$p_i$ = ' + str(val) for val in p_is], loc='lower right')
+
+    axlr.plot(Cs, period_prevalences_3)
+    axlr.legend(['$p_i$ = ' + str(val) for val in p_is], loc='lower right')
+
+
+    # # left upper axis for dispersion values
+    # ax_upper_axis = axul.twiny()
+    # ax_upper_axis.set_xlim(axul.get_xlim())
+    # ax_upper_axis.set_xticks(Cs)
+    # ax_upper_axis.set_xticklabels(["{:.2f}".format(a) for a in achieved_disps.mean(axis=0)])
+    # ax_upper_axis.set_xlabel('D(g)')
+    #
+    # # right upper axis for dispersion values
+    # ax_upper_axis = axur.twiny()
+    # ax_upper_axis.set_xlim(axul.get_xlim())
+    # ax_upper_axis.set_xticks(Cs)
+    # ax_upper_axis.set_xticklabels(["{:.2f}".format(a) for a in achieved_disps.mean(axis=0)])
+    # ax_upper_axis.set_xlabel('D(g)')
+
+
+    # ax2.plot(Cs, peak_heights_2, 'C1')
+    # ax2.plot(Cs, peak_heights_3, 'C2')
+    # ax2.set_ylabel('Scaled peak height')
+    #
+    # ax2.plot(Cs, peak_heights_2, 'C1')
+    # ax2.plot(Cs, peak_heights_3, 'C2')
+    # ax2.set_ylabel('Scaled peak height')
+    #
+    # ax3.plot(Cs, period_prevalences_2, 'C1')
+    # ax3.plot(Cs, period_prevalences_3, 'C2')
+    # ax3.set_ylabel('Scaled period prevalence')
+    # ax3.set_xlabel('C(g)')
+    # # labels = [interval[0],] + list(['' for i in range(len(ps)-2)]) + [interval[1],]
+    # ax3.set_xticks(Cs, minor=False)
+    # ax3.xaxis.set_major_formatter(FormatStrFormatter('%.3f'))
+    #
+    #
+    # ax_upper_axis = ax2.twiny()
+    #
+    # ax_upper_axis.set_xlim(ax3.get_xlim())
+    # ax_upper_axis.set_xticks(Cs)
+    # ax_upper_axis.set_xticklabels(["{:.3f}".format(a) for a in achieved_disps.mean(axis=0)])
+    # # ax_upper_axis.xaxis.set_major_formatter(FormatStrFormatter('%.3f'))
+    # ax_upper_axis.set_xlabel('D(g)')
+    #
+    # # plt.xticks([interval[0],interval[1]])
+    # ax3.legend(['Quarantine', 'Tracing'])
+
+    parent = os.path.dirname(path)
+    fig.savefig(os.path.join(parent, 'Pics', 'Cvaried_n{}_C{}_comp_corrected'.format(
+        n, str(interval[0]) + 'to' + str(interval[1])) + '.pdf'), bbox_inches='tight')
+    return out
+
 
 def vary_C_comp_epcurves(res, n, p, p_i, mc_iterations, max_t, interval, seed=0, force_recompute=False,
                          path=None):
@@ -803,13 +990,14 @@ def vary_C_comp_epcurves(res, n, p, p_i, mc_iterations, max_t, interval, seed=0,
     achieved_disps = np.zeros((3, res))
 
     # set up the plots
-    fig, axes = plt.subplots(1, 4, figsize=(14, 14 / 16 * 9),gridspec_kw={'width_ratios': [5,5,5,0.3]})
+    scale = 0.75
+    fig, axes = plt.subplots(1, 4, figsize=(8*scale, 4*scale),gridspec_kw={'width_ratios': [5,5,5,0.3]}, dpi=1200)
 
     ax1, ax2, ax3, cbar_ax = axes
 
     ax1.set_ylabel('Infected')
-    ax2.set_ylabel('Infected')
-    ax3.set_ylabel('Infected')
+    # ax2.set_ylabel('Infected')
+    # ax3.set_ylabel('Infected')
     ax1.set_xlabel('t')
     ax2.set_xlabel('t')
     ax3.set_xlabel('t')
@@ -908,8 +1096,10 @@ def vary_C_comp_epcurves(res, n, p, p_i, mc_iterations, max_t, interval, seed=0,
 
         pickle.dump(out, f)
 
+    plt.tight_layout()
+
     fig.savefig(os.path.join(parent, 'Pics', 'Cvaried_n{}_C{}_comp_epcurves'.format(
-        n, str(interval[0]) + 'to' + str(interval[1])) + '.png'), bbox_inches='tight')
+        n, str(interval[0]) + 'to' + str(interval[1])) + '.pdf'), bbox_inches='tight')
 
     return out
 
