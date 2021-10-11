@@ -483,7 +483,11 @@ class Net(object):
         # nx.draw(self.graph, node_color=self.colormap, pos=pos)
 
         nodes = nx.draw_networkx_nodes(self.graph, pos, node_size=1)
-        edges = nx.draw_networkx_edges(self.graph, pos, width=0.01)
+        edges = nx.draw_networkx_edges(self.graph, pos, width=0.1)
+        # cnt = plt.contourf(x, y, z)
+
+        # for c in edges.collections:
+        #     c.set_edgecolor("face")
 
         if show:
                 plt.show()

@@ -46,7 +46,11 @@ a = time.time()
 net1 = Net(n, p, p_i, max_t, 1, clustering_target=interval[0])
 net2 = Net(n, p, p_i, max_t, 1, clustering_target=interval[1])
 
-plt.figure(figsize=(columwidth,2*columwidth),dpi=1000)
+plt.figure(figsize=(columwidth,2*columwidth),dpi=1200)
+
+# matplotlib.rcParams['lines.antialiased'] = True
+# matplotlib.rcParams['patch.antialiased'] = True
+# matplotlib.rcParams['patch.linewidth'] = 0.01
 
 plt.subplot(211)
 net1.draw(show=False)
@@ -62,7 +66,7 @@ print(len(net2.graph.edges))
 
 # plt.show()
 
-plt.savefig(os.path.join(path, 'network_clustering_vis' + '.jpg'), bbox_inches='tight')
+plt.savefig(os.path.join(path, 'network_clustering_vis' + '.png'), bbox_inches='tight')
 
 
 b = time.time()
