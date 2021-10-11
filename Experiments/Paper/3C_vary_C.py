@@ -29,7 +29,7 @@ p = 0.01
 p_i = 0.5
 # mc_iterations = 100
 mc_iterations = 1000
-max_t = 400
+max_t = 300
 
 # res = 10
 res = 20
@@ -55,19 +55,6 @@ if __name__ == '__main__':
         Cs, unsuccessful_flags_3,peak_times_3, peak_heights_3,period_prevalences_3, achieved_C, achieved_D = \
             vary_C_comp_epcurves(res, n, p, p_i, mc_iterations, max_t, interval,seed=0, force_recompute=force_recompute, path=path)
 
-
-
-# TODO
-# peak_times = [t_peak1,t_peak2,t_peak3]
-# peak_heights = [peak_height1,peak_height2,peak_height3]
-# period_prevalences = [durchseuchung1,durchseuchung2,durchseuchung3]
-#
-# d = {'Peak time':peak_times, 'Peak prevalence':peak_heights, 'Fraction of affected':period_prevalences}
-#
-# frame = pd.DataFrame(data=d, index=['Vanilla', 'Quarantine','Tracing'])
-# latexstr = frame.to_latex()
-#
-# print(frame)
 
 
 b = time.time()

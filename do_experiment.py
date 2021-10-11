@@ -12,15 +12,19 @@ from net import Net
 from tqdm import tqdm
 import cycler
 
+
 #Direct input
 plt.rcParams['text.latex.preamble'] = r"\usepackage{bm} \usepackage{amsmath}"
 # plt.rcParams['text.latex.preamble']=[r"\usepackage{lmodern}"]
 #Options
 params = {'text.usetex' : True,
-          'font.size' : 11,
-          'font.family' : 'lmodern',
+          'font.size' : 10,
+          # 'font.family' : 'lmodern',
           }
 plt.rcParams.update(params)
+
+columwidth = 251.8/72.27 # 251.80688[pt] / 72.27[pt/inch]
+
 
 
 # pickling disabled for now, uncomment plot lines for that
@@ -649,6 +653,25 @@ def vary_C_comp_corrected(res, n, p, p_i, mc_iterations, max_t, interval=None, s
         achieved_disps[0, i] = achieved_disp
 
 
+        # exposed = counts[EXP_STATE, :]
+        # infected = counts[INF_STATE, :]
+        # ep_curve = exposed + infected
+        #
+        # exposed_sd = sd[EXP_STATE, :]
+        # infected_sd = sd[INF_STATE, :]
+        # ep_curve_sd = exposed_sd + infected_sd
+        #
+        # # these are the point prevalence +- sd
+        # upper_alpha = (ep_curve[t_peak] + ep_curve_sd[t_peak])/n
+        # lower_alpha = (ep_curve[t_peak] - ep_curve_sd[t_peak])/n
+        #
+        # recovered = counts[REC_STATE, :]
+        # recovered_sd = sd[REC_STATE, :]
+        #
+        #
+        # upper_beta = recovered[-1]-recovered_sd/n
+
+
     # quarantine
     peak_times_2 = np.ndarray(res)
     peak_heights_2 = np.ndarray(res)
@@ -669,8 +692,8 @@ def vary_C_comp_corrected(res, n, p, p_i, mc_iterations, max_t, interval=None, s
         achieved_clusterings[1, i] = achieved_clustering
         achieved_disps[1, i] = achieved_disp
 
-        # Cs[i] = net.final_cluster_coeff # in the end I want to plot the actual coeff, not the target
-        # should specify this in the paper
+
+
 
     # tracing
     peak_times_3 = np.ndarray(res)
@@ -831,6 +854,7 @@ def vary_C_pi_comp_corrected(res, n, p, p_is:tuple, mc_iterations, max_t, interv
             achieved_disps[j, i] = achieved_disp
 
 
+
     # quarantine
     peak_times_2 = np.ndarray((res,n_p_i))
     peak_heights_2 = np.ndarray((res,n_p_i))
@@ -892,40 +916,66 @@ def vary_C_pi_comp_corrected(res, n, p, p_is:tuple, mc_iterations, max_t, interv
 
     # two modes for visualization
     scale = 1
-    fig, axes = plt.subplots(2, 2, figsize=(scale*8, scale*6), dpi=1200)
+
+    fig, axes = plt.subplots(4, 1, figsize=(columwidth, 1.75*columwidth), dpi=1000)
+
 
     # fig.subplots_adjust(wspace = 0.5)
-    (axul, axur), (axll, axlr) = axes # upper left, upper right, lower left, lower right
+    # (axul, axur), (axll, axlr) = axes # upper left, upper right, lower left, lower right
+    ax1, ax2, ax3, ax4 = axes # reordered to be 4x1.
 
 
-    axul.set_ylabel('Scaled peak height')
-    axll.set_ylabel('Scaled period prevalence')
-    axll.set_xlabel('C(g)')
-    axlr.set_xlabel('C(g)')
+    ax1.set_ylabel('$\\alpha_q$')
+    ax3.set_ylabel('$\\alpha_t$')
+    ax2.set_ylabel('$\\beta_q$')
+    ax4.set_ylabel('$\\beta_t$')
+    # ax1.set_ylabel('Scaled peak height')
+    # ax3.set_ylabel('Scaled peak height')
+    # ax2.set_ylabel('Scaled period prevalence')
+    # ax4.set_ylabel('Scaled period prevalence')
+    # ax1.set_ylabel('Scaled peak height')
+    # ax3.set_ylabel('Scaled peak height')
+    # ax2.set_ylabel('Scaled period prevalence')
+    # ax4.set_ylabel('Scaled period prevalence')
+    # ax2.set_xlabel('C(g)')
+    ax4.set_xlabel('C(g)')
 
     # axll.set_xticks(Cs, minor=False)
     # axll.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     # axlr.set_xticks(Cs, minor=False)
     # axlr.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
 
-    axul.set_title('Quarantine')
-    axur.set_title('Tracing')
+    # ax1.set_title('Quarantine')
+    # ax3.set_title('Tracing')
 
 
-    axul.set_prop_cycle(color=['orange','orange','orange',],linestyle=['-','--',':'])
-    axll.set_prop_cycle(color=['orange','orange','orange',],linestyle=['-','--',':'])
-    axur.set_prop_cycle(color=['green','green','green',],linestyle=['-','--',':'])
-    axlr.set_prop_cycle(color=['green','green','green',],linestyle=['-','--',':'])
+    ax1.set_prop_cycle(color=['orange','orange','orange',],linestyle=['-','--',':'])
+    ax2.set_prop_cycle(color=['orange','orange','orange',],linestyle=['-','--',':'])
+    ax3.set_prop_cycle(color=['green','green','green',],linestyle=['-','--',':'])
+    ax4.set_prop_cycle(color=['green','green','green',],linestyle=['-','--',':'])
 
 
-    axul.plot(Cs, peak_heights_2)
-    axur.plot(Cs, peak_heights_3)
+    l1 = ax1.plot(Cs, peak_heights_2)
+    l3 = ax3.plot(Cs, peak_heights_3)
+    l2 = ax2.plot(Cs, period_prevalences_2)
+    l4 = ax4.plot(Cs, period_prevalences_3)
 
-    axll.plot(Cs, period_prevalences_2)
-    axll.legend(['$p_i$ = ' + str(val) for val in p_is], loc='lower right')
+    labels1 = list(['quarantine: $p_i$=' + str(val) for val in p_is])
+    labels2 = list(['tracing: $p_i$=' + str(val) for val in p_is])
+    line_labels = labels1+labels2
 
-    axlr.plot(Cs, period_prevalences_3)
-    axlr.legend(['$p_i$ = ' + str(val) for val in p_is], loc='lower right')
+    fig.legend(handles = l1+l3,     # The line objects
+               labels=line_labels,   # The labels for each line
+               loc="center",   # Position of legend
+               bbox_to_anchor = (0.5,-0.1),
+               borderaxespad=0.1,    # Small spacing around legend box
+               )
+
+    plt.subplots_adjust(bottom=0.01)
+
+    # ax1.legend(['$p_i$=' + str(val) for val in p_is],loc='upper center', bbox_to_anchor=(0.5, -0.25), ncol=3) # looks bad
+    # ax2.legend(['$p_i$=' + str(val) for val in p_is],bbox_to_anchor=(0., 1.02, 1., .102), loc='lower left',ncol=3, mode="expand") # looks worse
+    # ax3.legend(['$p_i$=' + str(val) for val in p_is], loc='upper center', bbox_to_anchor=(0.5, -0.25),fancybox=True, shadow=True, ncol=3)
 
 
     # # left upper axis for dispersion values
@@ -970,10 +1020,11 @@ def vary_C_pi_comp_corrected(res, n, p, p_is:tuple, mc_iterations, max_t, interv
     #
     # # plt.xticks([interval[0],interval[1]])
     # ax3.legend(['Quarantine', 'Tracing'])
+    plt.tight_layout()
 
     parent = os.path.dirname(path)
     fig.savefig(os.path.join(parent, 'Pics', 'Cvaried_n{}_C{}_comp_corrected'.format(
-        n, str(interval[0]) + 'to' + str(interval[1])) + '.pdf'), bbox_inches='tight')
+        n, str(interval[0]) + 'to' + str(interval[1])) + '.pdf'), bbox_inches='tight', pad_inches=0)
     return out
 
 
@@ -990,14 +1041,43 @@ def vary_C_comp_epcurves(res, n, p, p_i, mc_iterations, max_t, interval, seed=0,
     achieved_disps = np.zeros((3, res))
 
     # set up the plots
-    scale = 0.75
-    fig, axes = plt.subplots(1, 4, figsize=(8*scale, 4*scale),gridspec_kw={'width_ratios': [5,5,5,0.3]}, dpi=1200)
+    # fig, axes = plt.subplots(1, 4, figsize=(8*scale, 4*scale),gridspec_kw={'width_ratios': [5,5,5,0.3]}, dpi=1000)
 
-    ax1, ax2, ax3, cbar_ax = axes
+
+    fig = plt.figure(figsize=(columwidth, columwidth))
+
+    rows = 3
+    columns = 2
+
+    grid = fig.add_gridspec(rows, columns, wspace = .25, hspace = .35, width_ratios = [10,0.4])
+
+    # plt.subplot(grid[0, :])
+    # plt.annotate('sub1', xy = (0.5, -0.5), va = 'center', ha = 'center',  weight='bold', fontsize = 15)
+    # plt.plot(x, y)
+    #
+    # plt.subplot(grid[1, 0])
+    # plt.annotate('sub2', xy = (0.5, -0.5), va = 'center', ha = 'center',  weight='bold', fontsize = 15)
+    # plt.plot(x, y)
+    #
+    # plt.subplot(grid[1, 1])
+    # plt.annotate('sub3', xy = (0.5, -0.5), va = 'center', ha = 'center',  weight='bold', fontsize = 15)
+    # plt.plot(x, y)
+    #
+    # plt.subplot(grid[1, 2])
+    # plt.annotate('sub4', xy = (0.5, -0.5), va = 'center', ha = 'center',  weight='bold', fontsize = 15)
+    # plt.plot(x, y)
+    # plt.show()
+    ax1 = fig.add_subplot(grid[0,0])
+    ax2 = fig.add_subplot(grid[1,0])
+    ax3 = fig.add_subplot(grid[2,0])
+
+    cbar_ax = fig.add_subplot(grid[:,1])
+
+    # ax1, ax2, ax3, cbar_ax = axes
 
     ax1.set_ylabel('Infected')
-    # ax2.set_ylabel('Infected')
-    # ax3.set_ylabel('Infected')
+    ax2.set_ylabel('Infected')
+    ax3.set_ylabel('Infected')
     ax1.set_xlabel('t')
     ax2.set_xlabel('t')
     ax3.set_xlabel('t')
@@ -1096,7 +1176,8 @@ def vary_C_comp_epcurves(res, n, p, p_i, mc_iterations, max_t, interval, seed=0,
 
         pickle.dump(out, f)
 
-    plt.tight_layout()
+    # plt.tight_layout()
+    fig.align_ylabels()
 
     fig.savefig(os.path.join(parent, 'Pics', 'Cvaried_n{}_C{}_comp_epcurves'.format(
         n, str(interval[0]) + 'to' + str(interval[1])) + '.pdf'), bbox_inches='tight')

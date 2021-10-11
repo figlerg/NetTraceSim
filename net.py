@@ -46,6 +46,7 @@ class Net(object):
         #for dumping the event history (verification)
         self.event_history = []
 
+
         if p == 0:
             print('Warning: p = 0, so the graph will not be checked for connectedness.')
             self.graph = nx.fast_gnp_random_graph(n, p, seed=seed)
@@ -59,8 +60,15 @@ class Net(object):
                 self.last_seed = seed  # this is the seed that was used.
                 # I save this so I can choose a different one when I want to create a new net in mc
 
+        # for comparison, even new network structures use same layout (this only writes self.pos once, at start)
+        if not hasattr(self, 'pos'):
+            self.pos = nx.spring_layout(self.graph, seed=seed)
+
+
+
         assert not (clustering_target and dispersion_target), "Cannot set a dispersion target and " \
                                                             "a clustering target at the same time"
+
         if self.clustering_target:
             self.final_cluster_coeff = self.alter_clustering_coeff(clustering_target, epsilon_clustering)
         else:
@@ -81,9 +89,7 @@ class Net(object):
         self.net_states = []  # this is a list of nets at equidistant time steps
         # i use this for the animation frames
 
-        # for comparison, even new network structures use same layout (this only writes self.pos once, at start)
-        if not hasattr(self, 'pos'):
-            self.pos = nx.spring_layout(self.graph, seed=seed)
+
 
         for id in range(n):
             # at first all agents are susceptible
@@ -471,12 +477,18 @@ class Net(object):
         else:
             plt.show()
 
-    def draw(self):
+    def draw(self, show=True):
         pos = self.pos
         # i deliberately leave the seed fixed, maybe I want same positions for networks of equal size
-        nx.draw(self.graph, node_color=self.colormap, pos=pos)
+        # nx.draw(self.graph, node_color=self.colormap, pos=pos)
 
-        plt.show()
+        nodes = nx.draw_networkx_nodes(self.graph, pos, node_size=1)
+        edges = nx.draw_networkx_edges(self.graph, pos, width=0.01)
+
+        if show:
+                plt.show()
+        else:
+            return
 
     def animate_last_sim(self, dest=None):
         print("Generating animation...")
