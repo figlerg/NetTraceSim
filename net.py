@@ -376,6 +376,8 @@ class Net(object):
         # net is input
         # run sim n times, saving the output in list
         results: List[np.ndarray] = []
+        results_peaks: List[float] = []
+        results_prevalence: List[float] = []
         net_cluster_coeffs: List[float] = []
         net_disps : List[float] = []
         for i in range(n):
@@ -383,28 +385,45 @@ class Net(object):
             self.reset(hard=redo)
             # if redo:
             #     print(self.clustering())
-            results.append(self.sim(seed=i, mode=mode).copy())
+            counts = self.sim(seed=i, mode=mode).copy()
+            results.append(counts)
             net_cluster_coeffs.append(self.final_cluster_coeff)
             net_disps.append(self.final_dispersion)
 
+            # compute when the peak happens and what the ratio of infected is then
+            exposed = counts[EXP_STATE, :]
+            infected = counts[INF_STATE, :]
+            ep_curve = exposed + infected
+            t_peak = np.argmax(ep_curve, axis=0)
+            peak_height = ep_curve[t_peak] /self.n
+            results_peaks.append(peak_height)
+
+            # period prevalence
+            recovered = counts[REC_STATE, :]
+            virus_contacts = ep_curve + recovered
+            period_prevalence = virus_contacts[-1] / n
+            results_prevalence.append(period_prevalence)
+
+
         # compute mean
-        mean = np.zeros(results[0].shape)
+        mean_counts = np.zeros(results[0].shape)
+        meansq_counts = np.zeros(results[0].shape)
         for counts in results:
-            mean += counts
-        mean /= len(results)
+            mean_counts += counts
+            meansq_counts += np.square(counts)
+        mean_counts /= len(results)
+        meansq_counts /= len(results)
 
-        variance = np.zeros(results[0].shape)
-        for counts in results:
-            variance += np.square(counts-mean)
-        variance /= len(results)
+        mean_peaks = np.mean(results_peaks)
+        meansq_peaks = np.mean(np.square(results_peaks))
 
-        sd = np.sqrt(variance)
-
+        mean_prevalence = np.mean(results_prevalence)
+        meansq_prevalence = np.mean(np.square(results_prevalence))
 
         mean_clustering = np.mean(net_cluster_coeffs)
         mean_disp = np.mean(net_disps)
 
-        return mean, sd, mean_clustering,mean_disp
+        return mean_counts, meansq_counts, mean_peaks, meansq_peaks, mean_prevalence, meansq_prevalence , mean_clustering, mean_disp
 
     def reset(self, hard=False):
         # see note in __init__. Short: reset to original state (deepcopy), OR redo whole network
@@ -483,11 +502,7 @@ class Net(object):
         # nx.draw(self.graph, node_color=self.colormap, pos=pos)
 
         nodes = nx.draw_networkx_nodes(self.graph, pos, node_size=1)
-        edges = nx.draw_networkx_edges(self.graph, pos, width=0.1)
-        # cnt = plt.contourf(x, y, z)
-
-        # for c in edges.collections:
-        #     c.set_edgecolor("face")
+        edges = nx.draw_networkx_edges(self.graph, pos, width=0.01)
 
         if show:
                 plt.show()

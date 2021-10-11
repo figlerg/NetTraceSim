@@ -33,11 +33,12 @@ class MCProcess(Process):
 
     def run(self):
         with HiddenPrints():
-            [mean, sd, clustering, dispersion] = Net(n=self.n, p=self.p, p_i=self.p_i, max_t=self.max_t, seed=self.seed,
+            [mean_counts, meansq_counts, mean_peak, meansq_peak, mean_prevalence, meansq_prevalence, clustering, dispersion] = Net(n=self.n, p=self.p, p_i=self.p_i, max_t=self.max_t, seed=self.seed,
                                                      clustering_target=self.clustering_target,
                                                      dispersion_target=self.dispersion_target).monte_carlo(
                 self.mc_iterations, mode=self.mode)
-            self.queue[self.name] = [mean, sd, clustering, dispersion]
+			
+            self.queue[self.name] = [mean_counts, meansq_counts, mean_peak, meansq_peak, mean_prevalence, meansq_prevalence, clustering, dispersion]
         return
 
 
@@ -74,7 +75,7 @@ def simple_experiment(n, p, p_i, mc_iterations, max_t, seed=123, mode=None, forc
     else:
         try:
             with open(os.path.join(dirname, tag + "_counts.p"), 'rb') as f:
-                counts, sd,clustering,dispersion = pickle.load(f)
+                mean_counts, sd_counts, mean_peak, sd_peak, mean_prevalence, sd_prevalence,clustering,dispersion  = pickle.load(f)
             # with open(os.path.join(dirname, tag + "_net.p"), 'rb') as f:
             #    net = pickle.load(f)
 
@@ -96,51 +97,61 @@ def simple_experiment(n, p, p_i, mc_iterations, max_t, seed=123, mode=None, forc
                           mode))
             threads[-1].start()
 
-        countss = list()
-        sds = list()
+        mean_counts = list()
+        meansq_counts = list()
+        mean_peak = list()
+        meansq_peak = list()
+        mean_prevalence = list()
+        meansq_prevalence = list()
         clusterings = list()
         disps = list()
+
         for t in threads:
             t.join()  # wait for all threads to finish
         for v in q.values():
-            countss.append(v[0])
-            sds.append(v[1])
-            clusterings.append(v[2])
-            disps.append(v[3])
+            mean_counts.append(v[0])
+            meansq_counts.append(v[1])
+            mean_peak.append(v[2])
+            meansq_peak.append(v[3])
+            mean_prevalence.append(v[4])
+            meansq_prevalence.append(v[5])
+            clusterings.append(v[6])
+            disps.append(v[7])
         for t in threads:
             t.kill()
-        counts = sum(countss) / len(countss)
-        sd = sum(sds) / len(sds)  # i think this is sloppy...
+        mean_counts = sum(mean_counts) / len(mean_counts)
+        meansq_counts = sum(meansq_counts) / len(meansq_counts)
+        mean_peak = np.mean(mean_peak)
+        meansq_peak = np.mean(meansq_peak)
+        mean_prevalence = np.mean(mean_prevalence)
+        meansq_prevalence = np.mean(meansq_prevalence)
+
+        sd_counts = np.sqrt(meansq_counts-np.square(mean_counts))
+        sd_peak = np.sqrt(meansq_peak-np.square(mean_peak))
+        sd_prevalence = np.sqrt(meansq_prevalence-np.square(mean_prevalence))
+
         clustering = np.mean(clusterings)
         dispersion = np.mean(disps)
 
         # with open(os.path.join(dirname, tag + '_net.p'), 'wb') as f:
         #    pickle.dump(net, f)
         with open(os.path.join(dirname, tag + '_counts.p'), 'wb') as f:
-            pickle.dump((counts, sd,clustering,dispersion), f)
+            pickle.dump((mean_counts, sd_counts, mean_peak, sd_peak, mean_prevalence, sd_prevalence,clustering,dispersion), f)
 
         # net.plot_timeseries(counts, save= os.path.join(dirname, tag+'_vis.png'))
 
-    exposed = counts[EXP_STATE, :]
-    infected = counts[INF_STATE, :]
+    exposed = mean_counts[EXP_STATE, :]
+    infected = mean_counts[INF_STATE, :]
     ep_curve = exposed + infected
+    t_peak = np.argmax(ep_curve, axis=0) # simply take time for peak from mean counts (sloppy)
 
-    # compute when the peak happens and what the ratio of infected is then
-    t_peak = np.argmax(ep_curve, axis=0)
-    peak_height = ep_curve[t_peak] / n
-
-    # compute the ratio of all exposed people at end of sim to the number of indiv.
-    # (also check heuristically whether an equilibrium has been reached
-
-    recovered = counts[REC_STATE, :]
+    recovered = mean_counts[REC_STATE, :]
     virus_contacts = ep_curve + recovered
 
     sensitivity = max(1, n / 100)  # increasing divisor makes this more sensitive
     equilib_flag = abs(
         virus_contacts[-1] - virus_contacts[-2]) < sensitivity  # just a heuristic, see whether roc is low
 
-    period_prevalence = virus_contacts[-1] / n
-
     assert dispersion, 'These should not be None'
 
-    return None, counts, sd, t_peak, peak_height, equilib_flag, period_prevalence, clustering, dispersion
+    return None, mean_counts, sd_counts, t_peak, mean_peak, sd_peak, mean_prevalence, sd_prevalence, equilib_flag , clustering, dispersion
