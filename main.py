@@ -35,23 +35,24 @@ working_dir = os.getcwd()
 path = working_dir.join(['Experiments',])
 
 
+if __name__ == '__main__':
 
-net1, counts1,sd, t_peak1, peak_height1, equilib_flag1, durchseuchung1,achieved_clustering, achieved_disp = simple_experiment(
-    n, p, p_i, mc_iterations, max_t, mode='tracing', force_recompute=False, path=path, clustering=0.15)
+    net1, counts1,sd, t_peak1, peak_height1, equilib_flag1, durchseuchung1,achieved_clustering, achieved_disp = simple_experiment(
+        n, p, p_i, mc_iterations, max_t, mode='tracing', force_recompute=False, path=path, clustering=0.15)
 
-net2 = Net(n,p,p_i, max_t,seed=0, clustering_target=None, dispersion_target=None)
+    net2 = Net(n,p,p_i, max_t,seed=0, clustering_target=None, dispersion_target=None)
 
 
-print('Clustering- altered:{}, normal:{}'.format(net1.clustering(), net2.clustering()))
-print('Dispersion- altered:{}, normal:{}'.format(net1.dispersion(), net2.dispersion()))
+    print('Clustering- altered:{}, normal:{}'.format(net1.clustering(), net2.clustering()))
+    print('Dispersion- altered:{}, normal:{}'.format(net1.dispersion(), net2.dispersion()))
 
-# net1.animate_last_sim()
+    # net1.animate_last_sim()
 
-# print(net1.clustering())
+    # print(net1.clustering())
 
-net1.plot_timeseries(counts1, sd=sd)
+    net1.plot_timeseries(counts1, sd=sd)
 
-plt.show()
+    plt.show()
 
 
 

@@ -37,6 +37,7 @@ path = os.path.join(working_dir,'Cache')
 # vary_p(res, n, p_i, mc_iterations, max_t,interval=interval, mode=None, force_recompute=force_recompute, path=path)
 # vary_p(res, n, p_i, mc_iterations, max_t,interval=interval, mode='quarantine', force_recompute=force_recompute, path=path)
 # vary_p(res, n, p_i, mc_iterations, max_t,interval=interval, mode='tracing', force_recompute=force_recompute, path=path)
-with HiddenPrints():
-    vary_p_plot_cache(res, n, p_i, mc_iterations, max_t, interval=interval, force_recompute=force_recompute, path=path)
+if __name__ == '__main__':
+    with HiddenPrints():
+        vary_p_plot_cache(res, n, p_i, mc_iterations, max_t, interval=interval, force_recompute=force_recompute, path=path)
 

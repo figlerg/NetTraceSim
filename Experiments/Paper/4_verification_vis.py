@@ -27,7 +27,7 @@ net.sim(seed)
 
 working_dir = os.getcwd()
 path = os.path.join(working_dir,'Verification')
-name = os.path.join(path,'verification_run_example.mp4')
+name = os.path.join(path,'verification_run_example.gif')
 net.animate_last_sim(dest=name)
 df:pd.DataFrame = net.parse_event_history()
 
