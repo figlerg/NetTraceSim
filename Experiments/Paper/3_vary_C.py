@@ -38,14 +38,16 @@ path = os.path.join(working_dir,'Cache')
 
 # the plots are created in cache folder
 a = time.time()
-with HiddenPrints():
-    Cs, unsuccessful_flag,peak_times, peak_heights,period_prevalences = vary_C(res, n, p, p_i, mc_iterations, max_t,
-                                                                               interval, mode='tracing',
-                                                                               force_recompute=force_recompute, path=path)
-    # Cs, unsuccessful_flags_1,peak_times_1, peak_heights_1,period_prevalences_1, \
-    # Cs, unsuccessful_flags_2,peak_times_2, peak_heights_2,period_prevalences_2,\
-    # Cs, unsuccessful_flags_3,peak_times_3, peak_heights_3,period_prevalences_3 = \
-    #     vary_C_comp(res,n,p,p_i,mc_iterations,max_t,interval,force_recompute=force_recompute,path=path)
+if __name__ == '__main__':
+
+    with HiddenPrints():
+        Cs, unsuccessful_flag,peak_times, peak_heights,period_prevalences = vary_C(res, n, p, p_i, mc_iterations, max_t,
+                                                                                   interval, mode='tracing',
+                                                                                   force_recompute=force_recompute, path=path)
+        # Cs, unsuccessful_flags_1,peak_times_1, peak_heights_1,period_prevalences_1, \
+        # Cs, unsuccessful_flags_2,peak_times_2, peak_heights_2,period_prevalences_2,\
+        # Cs, unsuccessful_flags_3,peak_times_3, peak_heights_3,period_prevalences_3 = \
+        #     vary_C_comp(res,n,p,p_i,mc_iterations,max_t,interval,force_recompute=force_recompute,path=path)
 
 
 

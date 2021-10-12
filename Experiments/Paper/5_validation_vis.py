@@ -53,14 +53,16 @@ mc_iterations = 100
 working_dir = os.getcwd()
 path = os.path.join(working_dir,'Cache')
 
-net1, counts1,sd1, t_peak1, peak_height1, equilib_flag1, durchseuchung1 = \
-    simple_experiment(n, p, p_i, mc_iterations, max_t, mode=None, force_recompute=force_recompute, path=path)
+if __name__ == '__main__':
+
+    net1, counts1,sd1, t_peak1, peak_height1, equilib_flag1, durchseuchung1 = \
+        simple_experiment(n, p, p_i, mc_iterations, max_t, mode=None, force_recompute=force_recompute, path=path)
 
 
-net1.plot_timeseries(counts1,existing_ax=ax2)
+    net1.plot_timeseries(counts1,existing_ax=ax2)
 
-ax2.set_title('Our SEIR-Model')
+    ax2.set_title('Our SEIR-Model')
 
-plt.tight_layout()
-# plt.show()
-plt.savefig(os.path.join(working_dir,'Pics','ODEcomp'))
+    plt.tight_layout()
+    # plt.show()
+    plt.savefig(os.path.join(working_dir,'Pics','ODEcomp'))

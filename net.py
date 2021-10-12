@@ -513,7 +513,7 @@ class Net(object):
 
         # save to specified dir or just in working dir
         if not dest:
-            anim.save('last_vid.mp4')
+            anim.save('last_vid.gif')
         else:
             anim.save(dest)
         plt.close(fig)

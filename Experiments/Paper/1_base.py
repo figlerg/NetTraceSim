@@ -33,50 +33,51 @@ working_dir = os.getcwd()
 path = os.path.join(working_dir,'Cache')
 
 
+if __name__ == '__main__':
 
-net1, counts1,sd1, t_peak1, peak_height1, equilib_flag1, durchseuchung1,_,_ = \
-    simple_experiment(n, p, p_i, mc_iterations, max_t, mode=None, force_recompute=force_recompute, path=path)
-net2, counts2,sd2, t_peak2, peak_height2, equilib_flag2, durchseuchung2,_,_ = \
-    simple_experiment(n, p, p_i, mc_iterations, max_t, mode='quarantine', force_recompute=force_recompute, path=path)
-net3, counts3,sd3, t_peak3, peak_height3, equilib_flag3, durchseuchung3,_,_ = \
-    simple_experiment(n, p, p_i, mc_iterations, max_t, mode='tracing', force_recompute=force_recompute, path=path)
+    net1, counts1,sd1, t_peak1, peak_height1, equilib_flag1, durchseuchung1,_,_ = \
+        simple_experiment(n, p, p_i, mc_iterations, max_t, mode=None, force_recompute=force_recompute, path=path)
+    net2, counts2,sd2, t_peak2, peak_height2, equilib_flag2, durchseuchung2,_,_ = \
+        simple_experiment(n, p, p_i, mc_iterations, max_t, mode='quarantine', force_recompute=force_recompute, path=path)
+    net3, counts3,sd3, t_peak3, peak_height3, equilib_flag3, durchseuchung3,_,_ = \
+        simple_experiment(n, p, p_i, mc_iterations, max_t, mode='tracing', force_recompute=force_recompute, path=path)
 
-peak_times = [t_peak1,t_peak2,t_peak3]
-peak_heights = [peak_height1,peak_height2,peak_height3]
-period_prevalences = [durchseuchung1,durchseuchung2,durchseuchung3]
+    peak_times = [t_peak1,t_peak2,t_peak3]
+    peak_heights = [peak_height1,peak_height2,peak_height3]
+    period_prevalences = [durchseuchung1,durchseuchung2,durchseuchung3]
 
-print('Effect of quarantine on peak height:{} % reduction of peak height'.format(1-(peak_height2/peak_height1)))
-print('Effect of quarantine on period prevalence:{} % reduction of affected people'.format(1-(durchseuchung2/durchseuchung1)))
+    print('Effect of quarantine on peak height:{} % reduction of peak height'.format(1-(peak_height2/peak_height1)))
+    print('Effect of quarantine on period prevalence:{} % reduction of affected people'.format(1-(durchseuchung2/durchseuchung1)))
 
-d = {'Peak time':peak_times, 'Peak prevalence':peak_heights, 'Fraction of affected':period_prevalences}
+    d = {'Peak time':peak_times, 'Peak prevalence':peak_heights, 'Fraction of affected':period_prevalences}
 
-frame = pd.DataFrame(data=d, index=['Vanilla', 'Quarantine','Tracing'])
-latexstr = frame.to_latex()
+    frame = pd.DataFrame(data=d, index=['Vanilla', 'Quarantine','Tracing'])
+    latexstr = frame.to_latex()
 
-print(frame)
-print(latexstr)
-
-
-fig, (ax1,ax2,ax3) = plt.subplots(1,3,sharey=True,squeeze=True,figsize=(14, 3.5))
-
-net1.plot_timeseries(counts1, existing_ax=ax1)
-net2.plot_timeseries(counts2, existing_ax=ax2)
-net3.plot_timeseries(counts3, existing_ax=ax3)
-
-ax1.set_title('Vanilla Model')
-ax2.set_title('Quarantine')
-ax3.set_title('Tracing')
-
-plt.legend(['Susceptible', 'Exposed', 'Infected', 'Recovered'])
-
-working_dir = os.getcwd()
-path = os.path.join(working_dir,'Pics')
+    print(frame)
+    print(latexstr)
 
 
-# plt.gca().set_axis_off()
-# plt.subplots_adjust(top = 1, bottom = 0, right = 1, left = 0,
-#                     hspace = 0, wspace = 0)
-# plt.margins(0,0)
-# plt.gca().xaxis.set_major_locator(plt.NullLocator())
-# plt.gca().yaxis.set_major_locator(plt.NullLocator())
-plt.savefig(os.path.join(path,'base_comp'),bbox_inches = 'tight')
+    fig, (ax1,ax2,ax3) = plt.subplots(1,3,sharey=True,squeeze=True,figsize=(14, 3.5))
+
+    net1.plot_timeseries(counts1, existing_ax=ax1)
+    net2.plot_timeseries(counts2, existing_ax=ax2)
+    net3.plot_timeseries(counts3, existing_ax=ax3)
+
+    ax1.set_title('Vanilla Model')
+    ax2.set_title('Quarantine')
+    ax3.set_title('Tracing')
+
+    plt.legend(['Susceptible', 'Exposed', 'Infected', 'Recovered'])
+
+    working_dir = os.getcwd()
+    path = os.path.join(working_dir,'Pics')
+
+
+    # plt.gca().set_axis_off()
+    # plt.subplots_adjust(top = 1, bottom = 0, right = 1, left = 0,
+    #                     hspace = 0, wspace = 0)
+    # plt.margins(0,0)
+    # plt.gca().xaxis.set_major_locator(plt.NullLocator())
+    # plt.gca().yaxis.set_major_locator(plt.NullLocator())
+    plt.savefig(os.path.join(path,'base_comp'),bbox_inches = 'tight')
