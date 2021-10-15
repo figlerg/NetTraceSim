@@ -162,25 +162,45 @@ class Net(object):
                         if self.graph.edges[id, friend]['blocked'] == False))
         # can only use edges that aren't blocked due to quarantine
 
-        if friends:
-            contacted_friend_idx = np.random.choice(len(friends), 1)[0]
-            contacted_friend = friends[contacted_friend_idx]
-            self.graph.nodes[id]['contacts'].append(contacted_friend)
-        else:
+        if not friends:
+            # just in case this node is isolated right now, it should still try contacting people later until it recovered
             t_c_random = np.random.exponential(scale=t_c, size=1)[0]
             next_contact = (time + t_c_random, CONTACT, id)
             heapq.heappush(self.event_list, next_contact)
             return
 
-        if self.graph.nodes[contacted_friend]['state'] == SUSC_STATE:
+        for contacted_friend in friends:
+            self.graph.nodes[id]['contacts'].append(contacted_friend)
 
-            # print('#' + str(id) + ' has had contact with #{}.'.format(contacted_friend))
-            u = np.random.uniform()
+            if self.graph.nodes[contacted_friend]['state'] == SUSC_STATE:
 
-            if u < self.p_i:
-                heapq.heappush(self.event_list, (time, INFECTION, contacted_friend))
-        else:
-            pass  # if in any other state than susceptible, this contact does not matter
+                # print('#' + str(id) + ' has had contact with #{}.'.format(contacted_friend))
+                u = np.random.uniform()
+
+                if u < self.p_i:
+                    heapq.heappush(self.event_list, (time, INFECTION, contacted_friend))
+            else:
+                pass  # if in any other state than susceptible, this contact does not matter
+
+        # if friends:
+        #     contacted_friend_idx = np.random.choice(len(friends), 1)[0]
+        #     contacted_friend = friends[contacted_friend_idx]
+        #     self.graph.nodes[id]['contacts'].append(contacted_friend)
+        # else:
+        #     t_c_random = np.random.exponential(scale=t_c, size=1)[0]
+        #     next_contact = (time + t_c_random, CONTACT, id)
+        #     heapq.heappush(self.event_list, next_contact)
+        #     return
+        #
+        # if self.graph.nodes[contacted_friend]['state'] == SUSC_STATE:
+        #
+        #     # print('#' + str(id) + ' has had contact with #{}.'.format(contacted_friend))
+        #     u = np.random.uniform()
+        #
+        #     if u < self.p_i:
+        #         heapq.heappush(self.event_list, (time, INFECTION, contacted_friend))
+        # else:
+        #     pass  # if in any other state than susceptible, this contact does not matter
 
         if self.graph.nodes[id]['state'] == INF_STATE:
 
@@ -268,7 +288,12 @@ class Net(object):
         print('Simulation started.')
 
         event = (0, INFECTION, 0)  # ind. #0 is infected at t = 0
+        event2 = (0, INFECTION, 1) # several patients to make the start more stable
+        event3 = (0, INFECTION, 2)
         heapq.heappush(self.event_list, event)
+        heapq.heappush(self.event_list, event2)
+        heapq.heappush(self.event_list, event3)
+
 
         counter = 0
 

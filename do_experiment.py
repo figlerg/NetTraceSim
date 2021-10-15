@@ -1077,8 +1077,10 @@ def vary_C_pi_comp_corrected(res, n, p, p_is:tuple, mc_iterations, max_t, interv
 
     oranges = plt.get_cmap('Oranges')
     greens = plt.get_cmap('Greens')
+    n_colors = len(p_is)
+    col_vals = np.linspace(0.35,1,n_colors)
 
-    colors = [oranges(p_is[0]),oranges(p_is[1]),oranges(p_is[2]),greens(p_is[0]),greens(p_is[1]),greens(p_is[2]),]
+    colors = [oranges(col_vals[0]),oranges(col_vals[1]),oranges(col_vals[2]),greens(col_vals[0]),greens(col_vals[1]),greens(col_vals[2]),]
     linestyles = ['-','--',':']
 
     line_artists = [None,]*2*len(p_is)
