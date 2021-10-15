@@ -23,7 +23,7 @@ n = 500
 p = 0.01
 p_i = 0.5
 # mc_iterations = 100
-mc_iterations = 200
+mc_iterations = 10
 max_t = 400
 
 # res = 10

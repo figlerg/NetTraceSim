@@ -28,7 +28,7 @@ n = 500
 p = 0.01
 p_i = 0.5
 # mc_iterations = 100
-mc_iterations = 1000
+mc_iterations = 10
 max_t = 300
 
 # res = 10
@@ -53,7 +53,7 @@ if __name__ == '__main__':
         Cs, unsuccessful_flags_1,peak_times_1, peak_heights_1,period_prevalences_1, \
         Cs, unsuccessful_flags_2,peak_times_2, peak_heights_2,period_prevalences_2,\
         Cs, unsuccessful_flags_3,peak_times_3, peak_heights_3,period_prevalences_3, achieved_C, achieved_D = \
-            vary_C_comp_epcurves(res, n, p, p_i, mc_iterations, max_t, interval,seed=0, force_recompute=force_recompute, path=path)
+            vary_C_comp_epcurves(res, n, p, p_i, mc_iterations, max_t, interval,seed=1, force_recompute=force_recompute, path=path)
 
 
 

@@ -705,6 +705,8 @@ def vary_C_comp(res, n, p, p_i, mc_iterations, max_t, interval=None, seed=0, for
 
 def vary_C_comp_corrected(res, n, p, p_i, mc_iterations, max_t, interval=None, seed=0, force_recompute=False,
                           path=None):
+    # BROKEN! Since martin's commit?
+
     # measure effect of clustering coeff on tracing effectiveness. Here we scale according to the vanilla outcome
 
     if not interval:
@@ -1029,7 +1031,7 @@ def vary_C_pi_comp_corrected(res, n, p, p_is:tuple, mc_iterations, max_t, interv
     # two modes for visualization
     scale = 1
 
-    fig, axes = plt.subplots(4, 1, figsize=(columwidth, 1.75*columwidth), dpi=1000)
+    fig, axes = plt.subplots(4, 1, figsize=(columwidth, 2*columwidth), dpi=1000)
 
 
     # fig.subplots_adjust(wspace = 0.5)
@@ -1037,10 +1039,17 @@ def vary_C_pi_comp_corrected(res, n, p, p_is:tuple, mc_iterations, max_t, interv
     ax1, ax2, ax3, ax4 = axes # reordered to be 4x1.
 
 
-    ax1.set_ylabel('$\\alpha_q$')
-    ax3.set_ylabel('$\\alpha_t$')
-    ax2.set_ylabel('$\\beta_q$')
-    ax4.set_ylabel('$\\beta_t$')
+    # ax1.set_ylabel('$\\alpha_q$')
+    # ax3.set_ylabel('$\\alpha_t$')
+    # ax2.set_ylabel('$\\beta_q$')
+    # ax4.set_ylabel('$\\beta_t$')
+
+    ax1.set_ylabel('peak ratio')
+    ax3.set_ylabel('peak ratio')
+    ax2.set_ylabel('overall ratio')
+    ax4.set_ylabel('overall ratio')
+
+
     # ax1.set_ylabel('Scaled peak height')
     # ax3.set_ylabel('Scaled peak height')
     # ax2.set_ylabel('Scaled period prevalence')
@@ -1065,28 +1074,43 @@ def vary_C_pi_comp_corrected(res, n, p, p_is:tuple, mc_iterations, max_t, interv
     #ax2.set_prop_cycle(color=['orange','orange','orange',],linestyle=['-','--',':'])
     #ax3.set_prop_cycle(color=['green','green','green',],linestyle=['-','--',':'])
     #ax4.set_prop_cycle(color=['green','green','green',],linestyle=['-','--',':'])
-    colors = ['orange','green']
+
+    oranges = plt.get_cmap('Oranges')
+    greens = plt.get_cmap('Greens')
+
+    colors = [oranges(p_is[0]),oranges(p_is[1]),oranges(p_is[2]),greens(p_is[0]),greens(p_is[1]),greens(p_is[2]),]
     linestyles = ['-','--',':']
+
+    line_artists = [None,]*2*len(p_is)
+
     for i in range(3):
         linestyle = linestyles[i]
-        l1 = ax1.plot(Cs, peak_heights_2[:,i]/peak_heights_1[:,i],color=colors[0],linestyle = linestyle, zorder=1)
-        estimateQuotientCI(ax1,Cs,peak_heights_2[:,i],peak_heights_sd_2[:,i],peak_heights_1[:,i],peak_heights_sd_1[:,i],color=colors[0], mccount = mc_iterations, p=95)
-        l3 = ax3.plot(Cs, peak_heights_3[:,i]/peak_heights_1[:,i],color=colors[1],linestyle = linestyle,zorder=1)
+        l1 = ax1.plot(Cs, peak_heights_2[:,i]/peak_heights_1[:,i],color=colors[i],linestyle = linestyle, zorder=1)
+        estimateQuotientCI(ax1,Cs,peak_heights_2[:,i],peak_heights_sd_2[:,i],peak_heights_1[:,i],peak_heights_sd_1[:,i],color=colors[i], mccount = mc_iterations, p=95)
+        l3 = ax3.plot(Cs, peak_heights_3[:,i]/peak_heights_1[:,i],color=colors[3+i],linestyle = linestyle,zorder=1)
         estimateQuotientCI(ax3, Cs, peak_heights_3[:, i], peak_heights_sd_3[:, i], peak_heights_1[:, i],
-                           peak_heights_sd_1[:, i], color=colors[1], mccount = mc_iterations, p=95)
-        l2 = ax2.plot(Cs, period_prevalences_2[:,i]/period_prevalences_1[:,i],color=colors[0],linestyle = linestyle,zorder=1)
+                           peak_heights_sd_1[:, i], color=colors[3+i], mccount = mc_iterations, p=95)
+        l2 = ax2.plot(Cs, period_prevalences_2[:,i]/period_prevalences_1[:,i],color=colors[i],linestyle = linestyle,zorder=1)
         estimateQuotientCI(ax2, Cs, period_prevalences_2[:, i], period_prevalences_sd_2[:, i], period_prevalences_1[:, i],
-                           period_prevalences_sd_1[:, i], color=colors[0], mccount = mc_iterations,p=95)
-        l4 = ax4.plot(Cs, period_prevalences_3[:,i]/period_prevalences_1[:,i],color=colors[1],linestyle = linestyle,zorder=1)
+                           period_prevalences_sd_1[:, i], color=colors[i], mccount = mc_iterations,p=95)
+        l4 = ax4.plot(Cs, period_prevalences_3[:,i]/period_prevalences_1[:,i],color=colors[3+i],linestyle = linestyle,zorder=1)
         estimateQuotientCI(ax4, Cs, period_prevalences_3[:, i], period_prevalences_sd_3[:, i],
                            period_prevalences_1[:, i],
-                           period_prevalences_sd_1[:, i], color=colors[1], mccount = mc_iterations, p=95)
+                           period_prevalences_sd_1[:, i], color=colors[3+i], mccount = mc_iterations, p=95)
+        line_artists[i] = l1[0]
+        line_artists[len(p_is) + i] = l3[0]
+
+
 
     labels1 = list(['quarantine: $p_i$=' + str(val) for val in p_is])
     labels2 = list(['tracing: $p_i$=' + str(val) for val in p_is])
-    line_labels = labels1+labels2
+    # line_labels = [None,]*2*len(p_is)
 
-    fig.legend(handles = l1+l3,     # The line objects
+    # line_labels[::2] = labels1
+    # line_labels[1::2] = labels2
+    line_labels = labels1 + labels2
+
+    fig.legend(handles = line_artists,     # The line objects
                labels=line_labels,   # The labels for each line
                loc="center",   # Position of legend
                bbox_to_anchor = (0.5,-0.1),
@@ -1301,7 +1325,8 @@ def vary_C_comp_epcurves(res, n, p, p_i, mc_iterations, max_t, interval, seed=0,
     # plt.tight_layout()
     fig.align_ylabels()
 
-    fig.savefig(os.path.join('Experiments','Paper', 'Pics', 'Cvaried_n{}_C{}_comp_epcurves'.format(
+
+    fig.savefig(os.path.join(dirname_parent,'Experiments','Paper', 'Pics', 'Cvaried_n{}_C{}_comp_epcurves'.format(
         n, str(interval[0]) + 'to' + str(interval[1])) + '.pdf'), bbox_inches='tight')
 
     return out
