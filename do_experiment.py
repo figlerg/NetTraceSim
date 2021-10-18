@@ -1075,10 +1075,10 @@ def vary_C_pi_comp_corrected(res, n, p, p_is:tuple, mc_iterations, max_t, interv
     #ax3.set_prop_cycle(color=['green','green','green',],linestyle=['-','--',':'])
     #ax4.set_prop_cycle(color=['green','green','green',],linestyle=['-','--',':'])
 
-    oranges = plt.get_cmap('Oranges')
+    oranges = plt.get_cmap('Blues')
     greens = plt.get_cmap('Greens')
     n_colors = len(p_is)
-    col_vals = np.linspace(0.35,1,n_colors)
+    col_vals = np.linspace(0.7,1,n_colors)
 
     colors = [oranges(col_vals[0]),oranges(col_vals[1]),oranges(col_vals[2]),greens(col_vals[0]),greens(col_vals[1]),greens(col_vals[2]),]
     linestyles = ['-','--',':']
@@ -1266,7 +1266,7 @@ def vary_C_comp_epcurves(res, n, p, p_i, mc_iterations, max_t, interval, seed=0,
         achieved_disps[0, i] = achieved_disp
 
         # epidemiological curve
-        ax1.plot(mean_counts[2, :],color=cmap(norm(C)))
+        ax1.plot(mean_counts[2, :],color=cmap(norm(C)),linewidth=0.75)
 
     # quarantine
     peak_times_2 = np.ndarray(res)
@@ -1285,7 +1285,7 @@ def vary_C_comp_epcurves(res, n, p, p_i, mc_iterations, max_t, interval, seed=0,
         achieved_disps[1, i] = achieved_disp
 
         # epidemiological curve
-        ax2.plot(mean_counts[2, :],color=cmap(norm(C)))
+        ax2.plot(mean_counts[2, :],color=cmap(norm(C)),linewidth=0.75)
 
     # tracing
     peak_times_3 = np.ndarray(res)
@@ -1304,7 +1304,7 @@ def vary_C_comp_epcurves(res, n, p, p_i, mc_iterations, max_t, interval, seed=0,
         achieved_disps[2, i] = achieved_disp
 
         # epidemiological curve
-        ax3.plot(mean_counts[2, :],color=cmap(norm(C)))
+        ax3.plot(mean_counts[2, :],color=cmap(norm(C)),linewidth=0.75)
 
     parent = os.path.dirname(path)
     dirname_parent = os.path.dirname(__file__)

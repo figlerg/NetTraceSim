@@ -26,9 +26,9 @@ force_recompute = args.recompute
 
 n = 500
 p = 0.01
-p_i = 0.5
+p_i = 0.2
 # mc_iterations = 100
-mc_iterations = 10
+mc_iterations = 1000
 max_t = 300
 
 # res = 10

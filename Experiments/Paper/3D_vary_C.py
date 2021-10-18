@@ -24,10 +24,10 @@ p = 0.01
 # p_i = (0.25,0.5,0.75) # AFTER CHANGES TO MODEL, THIS HAD TO BE LOWER
 p_i = (0.1,0.2,0.3)
 
-mc_iterations = 1000
+mc_iterations = 2000
 max_t = 400
 
-res = 20
+res = 30
 interval = (p,6*p)
 # this means <res> equidistant points on <interval>
 
