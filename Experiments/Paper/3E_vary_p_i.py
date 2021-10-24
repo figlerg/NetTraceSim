@@ -47,7 +47,7 @@ if __name__ == '__main__':
         Cs, peak_times_1, peak_heights_1,period_prevalences_1, \
         peak_times_2, peak_heights_2,period_prevalences_2,\
         peak_times_3, peak_heights_3,period_prevalences_3, achieved_C, achieved_D = \
-            vary_C_pi_comp_corrected(res, n, p, p_i, mc_iterations, max_t, interval,seed=0, force_recompute=force_recompute, path=path)
+            vary_C_pi_comp_corrected_flipped(res, n, p, p_i, mc_iterations, max_t, interval,seed=0, force_recompute=force_recompute, path=path)
 
 b = time.time()
 
