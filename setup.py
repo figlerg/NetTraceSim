@@ -7,12 +7,12 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
       long_description = f.read()
 
 setup(
-      name='networks_tracing',
+      name='NetTraceSim',
       version='1.0.0',
       description='Agent based covid simulations on networks.',
-      author='Felix Gigler',
+      author='Felix Gigler, Martin Bicher',
       author_email='felix.gigler@tuwien.ac.at',
-      url='https://github.com/figlerg/network_tracing.git',
+      url='https://github.com/figlerg/NetTraceSim.git',
       install_requires=['numpy', 'matplotlib', 'networkx', 'scipy', 'ffmpeg-python','pandas','tqdm'],
       long_description=long_description,
       long_description_content_type="text/markdown",

@@ -4,7 +4,9 @@ authors:
   - family-names: Gigler
     given-names: Felix
     orcid: https://orcid.org/0000-0002-6495-9048
-title: "SEIR-Kompartmentmodelle in Netzwerken - Simulationen"
+  - family-names: Martin
+    given-names: Bicher
+title: "Contact Tracing for Disease Containment:a Network-Based Analysis"
 version: 0.5
 date-released: 2021-08-20
-url: https://github.com/figlerg/network_tracing
+url: https://github.com/figlerg/NetTraceSim
