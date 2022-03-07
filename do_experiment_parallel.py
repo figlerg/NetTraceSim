@@ -85,7 +85,7 @@ def simple_experiment(n, p, p_i, mc_iterations, max_t, seed=123, mode=None, forc
             recompute = True
 
     if recompute:
-        kernels = 7
+        kernels = 3
         runsPerKernel = int(mc_iterations / 5)
         threads = list()
 

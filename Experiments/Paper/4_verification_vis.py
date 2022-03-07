@@ -13,7 +13,7 @@ from helpers import HiddenPrints
 
 res = 20
 n = 10
-p = 0.5
+p = 0.2
 p_i = 0.5
 mc_iterations = 100
 max_t = 200

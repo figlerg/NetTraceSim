@@ -527,7 +527,7 @@ class Net(object):
         # nx.draw(self.graph, node_color=self.colormap, pos=pos)
 
         nodes = nx.draw_networkx_nodes(self.graph, pos, node_size=1)
-        edges = nx.draw_networkx_edges(self.graph, pos, width=0.01)
+        edges = nx.draw_networkx_edges(self.graph, pos, width=0.05)
 
         if show:
                 plt.show()
@@ -543,7 +543,7 @@ class Net(object):
         fig = plt.figure()
         pos = self.pos
 
-        nodes = nx.draw_networkx_nodes(self.graph, pos, node_color=self.net_states[0][1], node_size=3)
+        nodes = nx.draw_networkx_nodes(self.graph, pos, node_color=self.net_states[0][1], node_size=7)
         edges = nx.draw_networkx_edges(self.graph, pos, width=0.1)
 
         # function that draws a single frame from a saved state
@@ -551,7 +551,12 @@ class Net(object):
             nodes.set_color(self.net_states[idx][1])
             # edges = nx.draw_networkx_edges(self.graph, pos, width=0.1)
 
+            if idx == 50:
+                nx.draw(self.graph)
+
             return nodes,
+
+
 
         anim = animation.FuncAnimation(fig, animate, frames=len(self.net_states), interval=1000, blit=False)
 
@@ -559,7 +564,7 @@ class Net(object):
         if not dest:
             anim.save('last_vid.gif')
         else:
-            anim.save(dest)
+            anim.save(dest, dpi=1000)
         plt.close(fig)
 
         end = time.time()
