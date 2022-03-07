@@ -543,8 +543,8 @@ class Net(object):
         fig = plt.figure()
         pos = self.pos
 
-        nodes = nx.draw_networkx_nodes(self.graph, pos, node_color=self.net_states[0][1], node_size=7)
-        edges = nx.draw_networkx_edges(self.graph, pos, width=0.1)
+        nodes = nx.draw_networkx_nodes(self.graph, pos, node_color=self.net_states[0][1], node_size=40)
+        edges = nx.draw_networkx_edges(self.graph, pos, width=0.4)
 
         # function that draws a single frame from a saved state
         def animate(idx):
