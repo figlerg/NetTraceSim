@@ -32,6 +32,7 @@ plt.rcParams['text.latex.preamble'] = r"\usepackage{bm} \usepackage{amsmath}"
 # Options
 params = {'text.usetex': True,
           'font.size': 10,
+          'font.family': 'serif',
           # 'font.family' : 'lmodern',
           }
 plt.rcParams.update(params)
@@ -46,53 +47,61 @@ a = time.time()
 net1 = Net(n, p, p_i, max_t, 1, clustering_target=interval[0])
 net2 = Net(n, p, p_i, max_t, 1, clustering_target=interval[1])
 
-# THIS IS THE ONE FROM PAPER
-# plt.figure(figsize=(columwidth,2*columwidth),dpi=1200)
-#
-# # matplotlib.rcParams['lines.antialiased'] = True
-# # matplotlib.rcParams['patch.antialiased'] = True
-# # matplotlib.rcParams['patch.linewidth'] = 0.01
-#
-# plt.subplot(211)
-# net1.draw(show=False)
-# plt.title('Graph $g$ with $C(g) = {}$'.format(interval[0]))
-# print(len(net1.graph.edges))
-#
-# plt.subplot(212)
-# net2.draw(show=False)
-# plt.title('Graph $g$ with $C(g) = {}$'.format(interval[1]))
-# print(len(net2.graph.edges))
-#
-#
-#
-# # plt.show()
-#
-# plt.savefig(os.path.join(path, 'network_clustering_vis' + '.png'), bbox_inches='tight')
+# change here what the picture is for
+out = 'paper'
 
-# PRESENTATION
-plt.figure(figsize=(2*columwidth,columwidth),dpi=1200)
 
-# matplotlib.rcParams['lines.antialiased'] = True
-# matplotlib.rcParams['patch.antialiased'] = True
-# matplotlib.rcParams['patch.linewidth'] = 0.01
+if out == 'paper':
 
-plt.subplot(121)
-net1.draw(show=False)
-plt.title('Graph $g$ with $C(g) = {}$'.format(interval[0]))
-print(len(net1.graph.edges))
+    # THIS IS THE ONE FROM PAPER
+    plt.figure(figsize=(columwidth,2*columwidth),dpi=600)
 
-plt.subplot(122)
-net2.draw(show=False)
-plt.title('Graph $g$ with $C(g) = {}$'.format(interval[1]))
-print(len(net2.graph.edges))
+    # matplotlib.rcParams['lines.antialiased'] = True
+    # matplotlib.rcParams['patch.antialiased'] = True
+    # matplotlib.rcParams['patch.linewidth'] = 0.01
+
+    plt.subplot(211)
+    net1.draw(show=False)
+    plt.title('Graph $g$ with $C(g) = {}$'.format(interval[0]))
+    print(len(net1.graph.edges))
+
+    plt.subplot(212)
+    net2.draw(show=False)
+    plt.title('Graph $g$ with $C(g) = {}$'.format(interval[1]))
+    print(len(net2.graph.edges))
 
 
 
-# plt.show()
+    # plt.show()
 
-plt.savefig(os.path.join(path, 'network_clustering_vis' + '.png'), bbox_inches='tight')
+    plt.savefig(os.path.join(path, 'network_clustering_vis' + '.png'), bbox_inches='tight')
 
 
-b = time.time()
+elif out == 'presentation':
+    # PRESENTATION
+    plt.figure(figsize=(2*columwidth,columwidth),dpi=1200)
 
-print('Time:{} seconds'.format(b - a))
+    # matplotlib.rcParams['lines.antialiased'] = True
+    # matplotlib.rcParams['patch.antialiased'] = True
+    # matplotlib.rcParams['patch.linewidth'] = 0.01
+
+    plt.subplot(121)
+    net1.draw(show=False)
+    plt.title('Graph $g$ with $C(g) = {}$'.format(interval[0]))
+    print(len(net1.graph.edges))
+
+    plt.subplot(122)
+    net2.draw(show=False)
+    plt.title('Graph $g$ with $C(g) = {}$'.format(interval[1]))
+    print(len(net2.graph.edges))
+
+
+
+    # plt.show()
+
+    plt.savefig(os.path.join(path, 'network_clustering_vis' + '.png'), bbox_inches='tight')
+
+
+    b = time.time()
+
+    print('Time:{} seconds'.format(b - a))
